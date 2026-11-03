@@ -9,13 +9,15 @@
   },
   "scripts": {
     "dev": "turbo run dev",
+    "dev:agent": "eve dev",
     "build": "turbo run build",
+    "build:agent": "eve build",
     "lint": "turbo run lint lint:root",
     "typecheck": "turbo run typecheck typecheck:root",
     "test": "turbo run test",
     "format": "biome check --write .",
     "episode": "node --import tsx scripts/episode.ts",
-    "lint:root": "biome check scripts *.json *.md vitest.config.ts",
+    "lint:root": "biome check agent scripts *.json *.md vercel.ts vitest.config.ts",
     "typecheck:root": "tsc --noEmit"
   },
   "devDependencies": {
@@ -30,5 +32,9 @@
     "typescript": "catalog:",
     "vitest": "catalog:",
     "zod": "catalog:"
+  },
+  "dependencies": {
+    "eve": "1.0.0-rc.2",
+    "just-bash": "^3.6.0"
   }
 }

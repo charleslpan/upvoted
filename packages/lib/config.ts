@@ -2,7 +2,8 @@ import { z } from 'zod';
 
 /**
  * The show's settings, validated at import so a typo fails fast rather than mid-run.
- * Model ids are Vercel AI Gateway ids (https://ai-gateway.vercel.sh/v1/models).
+ * Model ids are Vercel AI Gateway ids (https://ai-gateway.vercel.sh/v1/models). The agent's own
+ * model is set in agent/agent.ts, and its cast and style in agent/instructions.md.
  */
 
 function isTimeZone(value: string): boolean {
@@ -32,7 +33,6 @@ const ConfigSchema = z.object({
     /** Absolute origin of the deployed site, with no trailing slash. */
     siteUrl: z.url(),
   }),
-  writer: z.object({ model: z.string().min(1) }),
   tts: z.object({
     model: z.string().min(1),
     /** The show-wide delivery style. A line's cue overrides it for that line. */
@@ -85,8 +85,6 @@ export const config: Config = ConfigSchema.parse({
     targetMinutes: 12,
     siteUrl: siteUrl(),
   },
-  // Sonnet 5.5 is the best value for this job: about half Opus 5.5's cost for the same script quality.
-  writer: { model: 'anthropic/claude-sonnet-5.5' },
   tts: {
     // Moving up to 'google/gemini-3.8-flash-tts' is a one-line change.
     model: 'google/gemini-3.8-flash-lite-tts',

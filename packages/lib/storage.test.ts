@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { del, describeStorage, getFile, getJson, keys, list, putFile, putJson } from './storage';
 
@@ -18,11 +18,11 @@ describe('local storage', () => {
     const schema = z.object({ date: z.iso.date(), ids: z.array(z.number()) });
     const value = { date: '2026-11-03', ids: [1, 2, 3] };
 
-    const saved = await putJson(keys.brief('2026-11-03'), value);
+    const saved = await putJson(keys.script('2026-11-03'), value);
 
-    expect(saved.key).toBe('episodes/2026-11-03/brief.json');
+    expect(saved.key).toBe('episodes/2026-11-03/script.json');
     expect(await getJson(saved.key, schema)).toEqual(value);
-    const file = path.join(outDir(), 'episodes', '2026-11-03', 'brief.json');
+    const file = path.join(outDir(), 'episodes', '2026-11-03', 'script.json');
     expect(fileURLToPath(saved.url)).toBe(file);
     expect(saved.bytes).toBe((await readFile(file)).byteLength);
   });
@@ -54,7 +54,7 @@ describe('local storage', () => {
     await putFile(keys.segment('2026-11-03', 1), 'b', 'audio/wav');
     await putFile(keys.segment('2026-11-03', 0), 'a', 'audio/wav');
     await putJson(keys.script('2026-11-03'), {});
-    await putJson(keys.brief('2026-11-02'), {});
+    await putJson(keys.script('2026-11-02'), {});
     await putJson(keys.index, { episodes: [] });
 
     const segments = await list('episodes/2026-11-03/segments/');
@@ -83,6 +83,33 @@ describe('local storage', () => {
     'rejects the key %j',
     async (key) => {
       await expect(putJson(key, {})).rejects.toThrow('Invalid storage key');
+    },
+  );
+});
+
+describe('outside production', () => {
+  it.each(['preview', 'development'])(
+    'keeps every file under preview/ when VERCEL_ENV is %s',
+    async (env) => {
+      await putJson(keys.index, { episodes: ['live'] });
+      vi.stubEnv('VERCEL_ENV', env);
+
+      expect(await getJson(keys.index, z.unknown())).toBeNull();
+      const saved = await putJson(keys.index, { episodes: [] });
+      await putFile(keys.episode('2026-11-03'), 'mp3', 'audio/mpeg');
+
+      expect(saved.key).toBe('index.json');
+      expect(fileURLToPath(saved.url)).toBe(path.join(outDir(), 'preview', 'index.json'));
+      expect(await getJson(keys.index, z.unknown())).toEqual({ episodes: [] });
+      expect((await list('')).map((file) => file.key)).toEqual([
+        'episodes/2026-11-03/episode.mp3',
+        'index.json',
+      ]);
+      await del(['index.json']);
+      expect(await getFile(keys.index)).toBeNull();
+
+      vi.stubEnv('VERCEL_ENV', 'production');
+      expect(await getJson(keys.index, z.unknown())).toEqual({ episodes: ['live'] });
     },
   );
 });

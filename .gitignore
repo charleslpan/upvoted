@@ -23,3 +23,7 @@ out/
 .DS_Store
 *.log
 coverage/
+
+# eve build output
+.eve/
+.output/

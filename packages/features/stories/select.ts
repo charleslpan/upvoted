@@ -5,16 +5,16 @@ import { ALGOLIA_SEARCH_URL, type AlgoliaHit, AlgoliaSearchSchema, fetchItem, is
 /** How many of the day's stories to rank; far more than the few we pick and exclude. */
 const CANDIDATES = 100;
 const DAY_SECONDS = 24 * 60 * 60;
-/** The daily cron fires in this hour (UTC). */
-export const CRON_HOUR_UTC = 8;
+/** The daily run starts in this hour (UTC). */
+export const RUN_HOUR_UTC = 9;
 
 /**
- * The moment an episode's stories are picked at: `CRON_HOUR_UTC` on its date, when the daily cron
- * runs, or `now` if that is still ahead.
+ * The moment an episode's stories are picked at: `RUN_HOUR_UTC` on its date, when the daily run
+ * starts, or `now` if that is still ahead.
  */
 export function selectionTime(date: string, now: Date): Date {
-  const cronTime = new Date(`${date}T${String(CRON_HOUR_UTC).padStart(2, '0')}:00:00Z`);
-  return cronTime < now ? cronTime : now;
+  const runTime = new Date(`${date}T${String(RUN_HOUR_UTC).padStart(2, '0')}:00:00Z`);
+  return runTime < now ? runTime : now;
 }
 
 /**
