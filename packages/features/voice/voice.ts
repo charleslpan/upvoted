@@ -48,19 +48,29 @@ export async function voiceSegment(
       const pcm = parseWav(wav);
       const durationSec = pcmDurationSec(pcm);
       const words = callTurns.reduce((sum, turn) => sum + countWords(turn.text), 0);
+      const predicted = predictedSec(callTurns);
       const elapsed = (performance.now() - started) / 1000;
+      const wpm = durationSec > 0 ? Math.round((words / durationSec) * 60) : 0;
       console.log(
         `  ${key} call ${i + 1}/${calls.length} (${adapter.name}): ${callTurns.length} turns, ` +
-          `${words} words → ${durationSec.toFixed(1)}s of audio in ${elapsed.toFixed(1)}s`,
+          `${words} words, predicted ${predicted.toFixed(1)}s → ${durationSec.toFixed(1)}s of ` +
+          `audio (${wpm} wpm) in ${elapsed.toFixed(1)}s`,
       );
-      warnOnOddDuration(`${key} call ${i + 1}`, durationSec, predictedSec(callTurns));
+      warnOnOddDuration(`${key} call ${i + 1}`, durationSec, predicted);
       return pcm;
     }),
   );
 
   const joined = joinPcm(chunks, CHUNK_GAP_SEC);
+  const words = turns.reduce((sum, turn) => sum + countWords(turn.text), 0);
+  const actual = pcmDurationSec(joined);
+  console.log(
+    `  ${key} (${segment.kind}): ${words} words in ${calls.length} calls, predicted ` +
+      `${predictedSec(turns).toFixed(1)}s → ${actual.toFixed(1)}s ` +
+      `(${actual > 0 ? Math.round((words / actual) * 60) : 0} wpm)`,
+  );
   await putFile(key, encodeWav(joined), 'audio/wav');
-  return { key, durationSec: pcmDurationSec(joined) };
+  return { key, durationSec: actual };
 }
 
 /**

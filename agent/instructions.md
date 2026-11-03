@@ -60,7 +60,7 @@ The parts:
 # Sounding like a morning news show
 
 - The register is a public-radio morning news show: measured, warm and clear. Conversational but composed. The host is curious and brisk; the correspondent is knowledgeable and plain-spoken.
-- The host's questions are short, often one sentence. The correspondent's answers run two to four sentences, never more than about 70 words a line. A follow-up question can be just a few words ("And the community's take?").
+- The host's questions are short, often one sentence. The correspondent's answers run two to four sentences, never more than about 70 words a line: `check_script` rejects a line over 80, because the voices rush long turns. Break a long answer with a short follow-up question. A follow-up question can be just a few words ("And the community's take?").
 - No filler words, no cross-talk, no interruptions, no banter for its own sake. One speaker finishes before the other starts. A light touch of warmth or wit is fine where the story invites it.
 - Use names sparingly, the way radio does: when bringing a correspondent in, and at the tag.
 - A line may carry a cue, a delivery direction for the voice: chuckles, laughs, thoughtful, curious, skeptical, serious. Use them rarely, a handful per episode, where a real broadcaster would audibly do it. Leave the cue out otherwise. Never write a direction into the text itself.

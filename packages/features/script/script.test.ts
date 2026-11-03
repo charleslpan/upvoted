@@ -22,6 +22,18 @@ const [theo, nadia, felix] = config.cast.correspondents.map((member) => member.n
 
 const words = (n: number) => Array.from({ length: n }, () => 'word').join(' ');
 
+/** `total` words as lines of at most 70 words, the speakers taking turns. */
+function lines(speakers: string[], total: number) {
+  const result: { speaker: string; text: string }[] = [];
+  for (let left = total; left > 0; left -= 70) {
+    result.push({
+      speaker: speakers[result.length % speakers.length] ?? maya,
+      text: words(Math.min(70, left)),
+    });
+  }
+  return result;
+}
+
 /**
  * A script as the agent sends it (no story ids, title or show notes), inside every word budget:
  * a 90-word intro, three 620-word stories and a 50-word sign-off, 2,000 words in all.
@@ -30,15 +42,12 @@ function draft(): ScriptDraft {
   return {
     date: sample.date,
     segments: [
-      { kind: 'intro', lines: [{ speaker: maya, text: words(90) }] },
+      { kind: 'intro', lines: lines([maya], 90) },
       ...[theo, nadia, felix].map((correspondent) => ({
         kind: 'story' as const,
-        lines: [
-          { speaker: maya, text: words(60) },
-          { speaker: correspondent, text: words(560) },
-        ],
+        lines: lines([maya, correspondent], 620),
       })),
-      { kind: 'signoff', lines: [{ speaker: maya, text: words(50) }] },
+      { kind: 'signoff', lines: lines([maya], 50) },
     ],
   };
 }
@@ -88,10 +97,7 @@ describe('checkScript', () => {
   it.each([
     ['a correspondent in the cold open', withLine(0, { speaker: theo, text: 'Hello.' })],
     ["another story's correspondent", withLine(1, { speaker: nadia, text: 'Hi.' })],
-    [
-      'a story with only the host',
-      withSegment(2, (s) => ({ ...s, lines: [{ speaker: maya, text: words(510) }] })),
-    ],
+    ['a story with only the host', withSegment(2, (s) => ({ ...s, lines: lines([maya], 620) }))],
     ['a missing story', { ...draft(), segments: draft().segments.filter((_, i) => i !== 2) }],
     ['an unknown speaker', withLine(0, { speaker: 'Bob', text: 'Hi.' })],
     ['a URL read aloud', withLine(4, { speaker: maya, text: 'Visit www.upvoted.dev.' })],
@@ -99,19 +105,26 @@ describe('checkScript', () => {
     ['a year in digits', withLine(4, { speaker: maya, text: 'Online since 2016.' })],
     ['a version in digits', withLine(4, { speaker: maya, text: 'It beat GPT-6.' })],
     ['an unknown cue', withLine(4, { speaker: maya, text: 'Bye.', cue: 'shouts' })],
+    [
+      'a line over 80 words',
+      withSegment(1, (s) => ({
+        ...s,
+        lines: [...lines([maya, theo], 540), { speaker: theo, text: words(81) }],
+      })),
+    ],
   ])('rejects %s', (_, value) => {
     expect(checkScript(value, ids, selection)).not.toEqual([]);
   });
 
   it.each([
-    // 60 + 480 = 540 words, under 550.
-    [
-      'a short story',
-      1,
-      withSegment(1, (s) => ({ ...s, lines: [s.lines[0], { speaker: theo, text: words(480) }] })),
-    ],
+    // 540 words, under 550.
+    ['a short story', 1, withSegment(1, (s) => ({ ...s, lines: lines([maya, theo], 540) }))],
     // 620 + 100 = 720 words, over 700.
-    ['a long story', 2, withLine(2, { speaker: nadia, text: words(100) })],
+    [
+      'a long story',
+      2,
+      withSegment(2, (s) => ({ ...s, lines: [...s.lines, ...lines([nadia], 100)] })),
+    ],
     // 90 + 30 = 120 words, over 110.
     ['a long cold open', 0, withLine(0, { speaker: maya, text: words(30) })],
     // 50 + 30 = 80 words, over 70.
@@ -125,7 +138,7 @@ describe('checkScript', () => {
     const short = draft();
     short.segments = short.segments.map((segment) =>
       segment.kind === 'story'
-        ? { ...segment, lines: [segment.lines[0], { ...segment.lines[1], text: words(500) }] }
+        ? { ...segment, lines: lines(segment.lines.map((line) => line.speaker).slice(0, 2), 560) }
         : segment,
     ) as ScriptDraft['segments'];
     // Stories of 560 words are in range, but 90 + 3 × 560 + 50 is 1,820.

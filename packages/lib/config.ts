@@ -90,8 +90,9 @@ export const config: Config = ConfigSchema.parse({
     model: 'google/gemini-3.8-flash-lite-tts',
     style:
       'A public-radio morning news show: a measured, warm, clear anchor and well-informed ' +
-      'correspondents. Conversational but composed, with crisp diction, an unhurried pace and ' +
-      'no filler. Never hyped, never announcer-like.',
+      'correspondents. Conversational but composed, with crisp diction, an unhurried pace of ' +
+      'about 150 words a minute, even in long answers, and no filler. Never rushed, never ' +
+      'hyped, never announcer-like.',
   },
   // Gemini prebuilt voices: Sulafat is "warm", Charon "informative", Erinome "clear" and
   // Sadaltager "knowledgeable".

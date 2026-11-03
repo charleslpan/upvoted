@@ -76,7 +76,7 @@ scripts/
   it.
 - **`@upvoted/features/script`**: `checkScript(draft, storyIds, selection)` returns the problems
   with a draft (empty when it's ready): the contract and cast rules, the stories picked, no URLs,
-  markdown or digits in the text, and the word budgets in `WORD_BUDGET` (intro 70–110, each story
+  markdown or digits in the text, no line over 80 words (long turns are where the voice rushes), and the word budgets in `WORD_BUDGET` (intro 70–110, each story
   550–700, sign-off 40–70, at least 1,900 in all, since Gemini reads at up to 180 words a
   minute). `buildScript` adds the story ids, title and
   show notes from HN. `agent/instructions.md` states the same budgets; change both together.
@@ -263,9 +263,10 @@ preview's own site shows.
   single-speaker mode (the lines as `text`, the host's `voice`). A story uses two-speaker mode:
   the host's and its correspondent's voices in `providerOptions.google.multiSpeakerVoiceConfig`,
   the lines as `turns`, and each line's `cue` as its `speechMetadata.style` (`styleForCue` in
-  `speech.ts`). Segments longer than one call's budget (`split.ts`: about 4 minutes of audio
+  `speech.ts`). Segments longer than one call's budget (`split.ts`: about 2 minutes of audio
   and 4,000 input tokens, well inside Gemini's 8,192-token, ~10.9-minute limits) are split at
-  whole turns, voiced at once and joined. It warns when a call's audio is far from what its
+  whole turns, voiced at once and joined. Longer calls made Gemini read faster, up to 190 words
+  a minute. Each call and each segment logs its words, predicted and actual seconds, and pace. It warns when a call's audio is far from what its
   word count predicts, which is how Gemini's voice swaps and dropped lines tend to show up.
   Adapters implement `SpeechAdapter` (`gemini.ts`, and `fake.ts` for tests and dry runs).
 - **`mixEpisode(date, segmentKeys)`** runs ffmpeg once: the theme, the intro, a sting before

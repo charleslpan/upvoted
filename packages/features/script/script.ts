@@ -126,6 +126,8 @@ const URL_PATTERN = /\bhttps?:\/\/|\bwww\.|\b[a-z0-9-]+\.(?:com|org|net|io|dev|a
 const MARKDOWN_PATTERN = /[*_`#]|\[[^\]]*\]\(|^\s*[-+>]\s/m;
 /** A voice engine may read "2016" or "GPT-6" in the wrong way; the script spells them out. */
 const DIGITS_PATTERN = /\S*\d\S*/;
+/** Long turns are where the voice engine rushes; the style guide asks for about 70 at most. */
+const MAX_LINE_WORDS = 80;
 
 /**
  * What's wrong with a part's lines, as sentences the model can act on. Empty when fine. Every
@@ -142,6 +144,13 @@ export function lineProblems(lines: Line[], speakers: string[]): string[] {
     }
     if (URL_PATTERN.test(line.text)) problems.push(`${where}: the text contains a URL or domain`);
     if (MARKDOWN_PATTERN.test(line.text)) problems.push(`${where}: the text contains markdown`);
+    const lineWords = line.text.match(/\S+/g)?.length ?? 0;
+    if (lineWords > MAX_LINE_WORDS) {
+      problems.push(
+        `${where}: ${lineWords} words; keep a line under about 70 and split a long answer with ` +
+          'a short follow-up question',
+      );
+    }
     const digits = DIGITS_PATTERN.exec(line.text);
     if (digits) {
       problems.push(
