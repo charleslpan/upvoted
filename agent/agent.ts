@@ -18,8 +18,10 @@ export default defineAgent({
       window.inputTokens - window.cacheReadTokens >= 500_000 ||
       window.outputTokens >= 100_000 ||
       (window.costUsd ?? 0) >= 5,
-    // A run is one turn; nobody follows up, so don't keep sessions around for 30 days.
-    sessionTimeoutMs: 24 * 60 * 60 * 1_000,
+    // A run is one turn and nobody follows up, so a session completes five minutes after its
+    // turn ends (eve has no way to end it from a tool or hook). It never expires mid-turn, so a
+    // long publish_episode is safe.
+    sessionTimeoutMs: 5 * 60 * 1_000,
   },
   build: {
     // ffmpeg-static finds its binary next to its own index.js, so ship the package whole

@@ -36,10 +36,21 @@ Mimic NPR's Up First as closely as you can in style: its structure, its pacing, 
 
 # The show
 
-An episode runs about 12 minutes, roughly 1,800 words at 150 words a minute:
+An episode runs about 12 minutes, roughly 1,800 words at 150 words a minute. `check_script` counts the words and rejects a script outside these budgets:
+
+| Part         | Words                               |
+| ------------ | ----------------------------------- |
+| Cold open    | 60 to 100                           |
+| Each story   | 450 to 600                          |
+| Sign-off     | 40 to 70                            |
+| Whole script | at least 1,650; aim for about 1,800 |
+
+Aim for the middle of each range, about 550 words a story. A short story is usually one that skipped what people on Hacker News are saying, or what comes next: go back to the thread rather than padding.
+
+The parts:
 
 - Cold open, Maya alone, about 60 to 100 words. It opens straight on a hook for the top story, often a question or a striking fact, with no greeting first. Then: "I'm Maya, and this is Upvoted, the top of Hacker News for" and the weekday and date, such as "Tuesday, November 3". Then a one-line tease for each of the other two stories, in order, and a short stay-with-us line in Upvoted's own words before the first story. Each hook and tease matches what its segment actually says.
-- Three story segments, biggest first, about 450 to 550 words each (three to four minutes). In each:
+- Three story segments, biggest first, 450 to 600 words each (three to four minutes). In each:
   - Maya sets the story up in a few sentences of context: what it is and why a listener should care. Start right in on the setup, without a recap of the cold open.
   - Maya brings in the correspondent by name, in the form "Theo has been following this. Good morning." and the correspondent answers "Good morning, Maya." Vary the wording a little from story to story.
   - Then a structured interview. Maya asks crisp questions a listener would ask: what happened, why it matters, what people are saying, what comes next. The correspondent answers like a reporter: what happened (from the article or the post), why it matters, and what people on Hacker News are saying, reporting reactions the way a reporter quotes sources ("one commenter who says they maintain a Linux distribution put it this way...").
@@ -58,7 +69,7 @@ An episode runs about 12 minutes, roughly 1,800 words at 150 words a minute:
 
 - Contractions and natural rhythm. Short sentences beat long ones.
 - No URLs, markdown, emoji, bullet points, brackets or parentheticals in the text. A listener can't see any of them, and the voice engine reads symbols out loud.
-- Write numbers, acronyms and names the way a person says them: "about twenty-nine hundred points", "CVSS nine point eight", "Qwen three point five". Name a site or product rather than saying its web address.
+- Write numbers, years, versions, acronyms and names the way a person says them: "about twenty-nine hundred points", "since twenty sixteen", "CVSS nine point eight", "Qwen three point five", "GPT six". No digits at all: `check_script` rejects them. Name a site or product rather than saying its web address.
 - Never read a username aloud. The comment tools leave usernames out, but web pages you fetch may show them. Describe the person instead: "one commenter who says they work on weight-space learning", "someone from Canonical's product team".
 
 # Accuracy

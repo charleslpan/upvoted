@@ -26,7 +26,7 @@ agent/                the eve agent (the root package's)
   channels/episode.ts         POST /api/episode, the manual trigger; schedules start runs here
   channels/eve.ts             eve's own HTTP API (/eve/v1/*), for the terminal UI
   schedules/daily-episode.ts  the daily run at 09:00 UTC
-  hooks/usage.ts              logs each run's tokens, cost, searches and fetches
+  hooks/usage.ts              logs each run's tokens, cost, searches and fetches (`upvoted usage:`)
   lib/                        state and schemas the tools share
 vercel.ts             the Vercel project: the site and the agent as services (withEve)
 apps/
@@ -75,8 +75,10 @@ scripts/
   functions `getArticle`, `getComments`, `getReplies` and `lookupStories`. Usernames never leave
   it.
 - **`@upvoted/features/script`**: `checkScript(draft, storyIds, selection)` returns the problems
-  with a draft (empty when it's ready), and `buildScript` adds the story ids, title and show notes
-  from HN.
+  with a draft (empty when it's ready): the contract and cast rules, the stories picked, no URLs,
+  markdown or digits in the text, and the word budgets in `WORD_BUDGET` (intro 60–100, each story
+  450–600, sign-off 40–70, at least 1,650 in all). `buildScript` adds the story ids, title and
+  show notes from HN. `agent/instructions.md` states the same budgets; change both together.
 
 ### Package rules
 
@@ -226,8 +228,14 @@ that keeps failing fails the call before anything is published.
 
 **Cost.** `limits.sessionUsage` in `agent/agent.ts` fails a session at 500,000 new input tokens,
 100,000 output tokens or $5. `web_fetch` cuts each page at about 20,000 tokens, and the
-instructions say to research only when it adds something. `hooks/usage.ts` logs each run's
-tokens, cost, searches and fetches.
+instructions say to research only when it adds something. `hooks/usage.ts` logs a line starting
+`upvoted usage:` with the session's tokens, cost, searches and fetches when `publish_episode`
+settles and at the end of each turn. Search the runtime logs for it to measure what an episode
+costs.
+
+**Sessions end on their own.** eve has no way for a tool or hook to end a session, so
+`sessionTimeoutMs` completes each one five minutes after its turn ends. Until then it shows as
+running, waiting for input, which costs nothing; it never times out while a turn is open.
 
 The site (`app/page.tsx`) renders on each request from `index.json`, so a published episode shows
 at once. Each `EpisodeRecord` carries its `stories` (title, url, domain, HN link) for the show

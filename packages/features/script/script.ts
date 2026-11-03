@@ -17,6 +17,17 @@ import { CUES, spokenDate } from './prompt';
 
 const host = config.cast.host.name;
 
+/**
+ * Word budgets for a 12-minute episode at about 150 words a minute. Each part's range, and a
+ * floor for the whole script; check_script rejects a draft outside them.
+ */
+export const WORD_BUDGET = {
+  intro: { min: 60, max: 100 },
+  story: { min: 450, max: 600 },
+  signoff: { min: 40, max: 70 },
+  totalMin: 1_650,
+} as const;
+
 /** The stories `get_top_stories` picked for an episode, biggest first. */
 export interface Selection {
   date: string;
@@ -61,7 +72,21 @@ export function checkScript(
     for (const problem of lineProblems(segment.lines, speakers)) {
       problems.push(`segments[${i}] (${where}): ${problem}`);
     }
+    const words = countWords(segment.lines);
+    const { min, max } = WORD_BUDGET[segment.kind];
+    if (words < min || words > max) {
+      problems.push(
+        `segments[${i}] (${where}): ${words} words; the ${segment.kind} runs ${min} to ${max}.`,
+      );
+    }
   });
+  const total = parsed.data.segments.reduce((sum, segment) => sum + countWords(segment.lines), 0);
+  if (total < WORD_BUDGET.totalMin) {
+    problems.push(
+      `The script is ${total} words; an episode needs at least ${WORD_BUDGET.totalMin}, about ` +
+        `${config.show.targetMinutes} minutes. Add depth to the stories.`,
+    );
+  }
   return [...new Set(problems)];
 }
 
@@ -98,6 +123,8 @@ export function renderTranscript(script: Script): string {
 const URL_PATTERN = /\bhttps?:\/\/|\bwww\.|\b[a-z0-9-]+\.(?:com|org|net|io|dev|ai|app|co)\b/i;
 /** Markdown that a voice engine would read out: emphasis, headings, code, links, lists. */
 const MARKDOWN_PATTERN = /[*_`#]|\[[^\]]*\]\(|^\s*[-+>]\s/m;
+/** A voice engine may read "2016" or "GPT-6" in the wrong way; the script spells them out. */
+const DIGITS_PATTERN = /\S*\d\S*/;
 
 /**
  * What's wrong with a part's lines, as sentences the model can act on. Empty when fine. Every
@@ -114,6 +141,12 @@ export function lineProblems(lines: Line[], speakers: string[]): string[] {
     }
     if (URL_PATTERN.test(line.text)) problems.push(`${where}: the text contains a URL or domain`);
     if (MARKDOWN_PATTERN.test(line.text)) problems.push(`${where}: the text contains markdown`);
+    const digits = DIGITS_PATTERN.exec(line.text);
+    if (digits) {
+      problems.push(
+        `${where}: "${digits[0]}" is in digits; write numbers, years and versions as they're said`,
+      );
+    }
     if (line.cue !== undefined && !(CUES as readonly string[]).includes(line.cue)) {
       problems.push(`${where}: "${line.cue}" is not an allowed cue (${CUES.join(', ')})`);
     }
@@ -122,6 +155,10 @@ export function lineProblems(lines: Line[], speakers: string[]): string[] {
     problems.push(`both ${speakers.join(' and ')} must speak`);
   }
   return problems;
+}
+
+function countWords(lines: Line[]): number {
+  return lines.reduce((sum, line) => sum + (line.text.match(/\S+/g)?.length ?? 0), 0);
 }
 
 /** The draft as a `Script`, story segment `i` covering `storyIds[i]`. */
