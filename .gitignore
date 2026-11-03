@@ -1,0 +1,25 @@
+# dependencies
+node_modules/
+
+# next.js
+.next/
+next-env.d.ts
+*.tsbuildinfo
+
+# turborepo
+.turbo/
+
+# local pipeline output (@upvoted/lib/storage writes here when no Blob token is set)
+out/
+
+# env files (.env.example is the template)
+.env*
+!.env.example
+
+# vercel
+.vercel/
+
+# misc
+.DS_Store
+*.log
+coverage/

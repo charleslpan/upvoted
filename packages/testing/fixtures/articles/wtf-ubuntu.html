@@ -1,0 +1,94 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta name="color-scheme" content="light dark"><title>WTF Ubuntu?</title><link rel="canonical" href="https://chalmovsky.com/posts/wtf-ubuntu"><link rel="icon" href="/assets/favicon-96x96.png"><link rel="apple-touch-icon" href="/assets/apple-touch-icon.png"><link rel="alternate" type="application/rss+xml" title="Chalmovský" href="/feed.xml"><!-- Privacy-friendly analytics by Plausible --><script async src="https://h.chalmovsky.com/js/pa-TMSyv1D0b2oIpsoIURJS_.js"></script><script>
+            ((window.plausible =
+                window.plausible ||
+                function () {
+                    (plausible.q = plausible.q || []).push(arguments);
+                }),
+                (plausible.init =
+                    plausible.init ||
+                    function (i) {
+                        plausible.o = i || {};
+                    }));
+            plausible.init();
+        </script><style>
+            html {
+                -webkit-text-size-adjust: 100%;
+                text-size-adjust: 100%;
+                font-family:
+                    Charter, "Bitstream Charter", "Sitka Text", Cambria, serif;
+            }
+            /* long paths and words wrap instead of widening the page (phones then zoom the whole page out) */
+            body {
+                overflow-wrap: break-word;
+            }
+            :not(pre) > code {
+                overflow-wrap: anywhere;
+            }
+            /* dark mode follows the device, with the same colors in every browser */
+            @media (prefers-color-scheme: dark) {
+                html {
+                    background: #121212;
+                    color: #e8e8e8;
+                }
+                a {
+                    color: #9db8ff;
+                }
+                a:visited {
+                    color: #c8a6ff;
+                }
+            }
+            /* phones: larger text, and a title that doesn't fill the whole screen */
+            @media (max-width: 36em) {
+                body {
+                    font-size: 1.1875em;
+                }
+                h1 {
+                    font-size: 1.6em;
+                    line-height: 1.25;
+                }
+            }
+        </style><style>
+        body {
+            max-width: 40em;
+            margin: auto;
+            padding: 1em;
+            line-height: 1.5;
+        }
+        pre {
+            overflow-x: auto;
+            padding: 0.5em;
+            border: 1px solid #8884;
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+        }
+    </style></head><body><main><h1>WTF Ubuntu?</h1><p><i>2026-11-02</i></p><p>What the fuck, Ubuntu?</p>
+<p>In case you missed it: <a href="https://ubuntu.com/security/CVE-2026-98432">CVE-2026-98432</a> is a critical (CVSS 9.8)
+bug in the Linux kernel's TCP code. It's been there since 2016, so virtually every Linux server on the planet
+has it, and it can be hit remotely. Anthropic says it built a working exploit that gets root on a server.
+A total takeover.</p>
+<p>Debian <a href="https://lists.debian.org/debian-security-announce/2026/msg00482.html">patched it on October 16</a>.
+Ubuntu still doesn't have a patch more than two weeks later.
+Every supported release, LTS included, is listed as "Vulnerable".</p>
+<p>Ubuntu's website promises <a href="https://ubuntu.com/server">"timely patches for critical vulnerabilities."</a>
+Ubuntu hasn't shipped the patch nine days after it was rated 9.8 and six days after a working root exploit.
+Very fucking timely indeed.</p>
+<p>Software is full of this blabber where words mean nothing. Ubuntu uses words like these:
+"Timely." "Enterprise-grade." "Production grade."  "Enterprise resilience. Developer velocity. Build with confidence on Ubuntu."</p>
+<p>Somebody, or perhaps worse, some special team at Canonical is dedicated to writing these........</p>
+<p>So I'm asking again... What the fuck, Ubuntu?</p>
+<p>I'm moving all my servers off Ubuntu. I've completely lost trust in it.
+On the desktop I always hated it anyway. On servers I mostly used it because it's the default
+on most VPS providers, and I considered it the solid, no-drama LTS distro. Fuck that now.</p>
+<p>I can't express how crazy this is. I didn't have time to migrate my services and data when I learned
+about this, so I had to take all my servers that run Ubuntu offline.</p>
+<p>Oh and btw, distros run by volunteers (Debian, Arch, Alpine...) hve shipped the fix. Meanwhile Ubuntu,
+made by a company that sells security subscriptions, hasn't. This is true as of 2026-11-02 14:48 UTC.</p>
+<aside class="plug"><p><i>Added after this blew up:</i> Can't beat all the bullshit, so I parody it at <a href="https://bloatberg.com">Bloatberg</a>.</p></aside><style>
+    aside.plug {
+        margin-top: 2.5em;
+        padding-top: 1em;
+        border-top: 1px solid #8884;
+    }
+</style></main><footer><p><a href="/posts/">← Posts</a></p></footer></body></html>
