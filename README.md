@@ -1,7 +1,8 @@
 # upvoted
 
-A daily, AI-generated podcast of the three biggest Hacker News stories: two hosts talk through
-each story and what the HN thread is arguing about, in about twelve minutes. Listen at
+A daily, AI-generated podcast of the three biggest Hacker News stories, in about twelve minutes:
+a host brings in a correspondent for each story, who explains what happened and what the HN
+thread is arguing about. Listen at
 **[upvoted.dev](https://upvoted.dev)**, which plays the latest episode.
 
 It runs on Vercel (Cron, Workflows, Blob and AI Gateway). The script is written by Claude and
@@ -22,9 +23,11 @@ Run it by hand, or for another day:
 ```sh
 curl -H "Authorization: Bearer $CRON_SECRET" https://upvoted.dev/api/cron/daily
 curl -H "Authorization: Bearer $CRON_SECRET" "https://upvoted.dev/api/cron/daily?date=2026-11-03"
+# Make a published day's episode again, replacing it:
+curl -H "Authorization: Bearer $CRON_SECRET" "https://upvoted.dev/api/cron/daily?force=1"
 ```
 
-It answers `{ "date": "...", "runId": "wrun_..." }`. Follow the run in the Vercel dashboard: open
+It answers `{ "date": "...", "force": false, "runId": "wrun_..." }`. Follow the run in the Vercel dashboard: open
 the **upvoted** project's Workflows view (under **Observability**) and find the run by that id. Each step
 shows its attempts, logs and errors. A failed step is retried a few times; if it keeps failing
 the run fails there, and nothing is published.
@@ -56,9 +59,10 @@ serves the site from whichever store is configured.
 
 ## Changing the voices
 
-The hosts and their voices are in `packages/lib/config.ts`:
+The cast and their voices are in `packages/lib/config.ts`:
 
-- `hosts[].voice` is a Gemini prebuilt voice name, such as `Kore` or `Puck`.
+- `cast.host` and `cast.correspondents[]` each have a `name` and a `voice`, a Gemini prebuilt
+  voice name such as `Kore` or `Puck`. Correspondent `i` covers story `i`.
 - `tts.model` is the AI Gateway speech model, and `tts.style` the show-wide speaking style.
 
 Try a change on a saved script with `pnpm episode --from voice --until mix`.

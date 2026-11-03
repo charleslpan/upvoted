@@ -36,8 +36,12 @@ describe('GET /api/cron/daily', () => {
     try {
       const response = await call();
       expect(response.status).toBe(200);
-      expect(await response.json()).toEqual({ date: '2026-11-03', runId: 'wrun_test' });
-      expect(start).toHaveBeenCalledWith(dailyEpisode, ['2026-11-03']);
+      expect(await response.json()).toEqual({
+        date: '2026-11-03',
+        force: false,
+        runId: 'wrun_test',
+      });
+      expect(start).toHaveBeenCalledWith(dailyEpisode, ['2026-11-03', false]);
     } finally {
       vi.useRealTimers();
     }
@@ -45,8 +49,24 @@ describe('GET /api/cron/daily', () => {
 
   it('takes another date to rerun', async () => {
     const response = await call(`${URL}?date=2026-11-01`);
-    expect(await response.json()).toEqual({ date: '2026-11-01', runId: 'wrun_test' });
-    expect(start).toHaveBeenCalledWith(dailyEpisode, ['2026-11-01']);
+    expect(await response.json()).toEqual({ date: '2026-11-01', force: false, runId: 'wrun_test' });
+    expect(start).toHaveBeenCalledWith(dailyEpisode, ['2026-11-01', false]);
+  });
+
+  it('passes force=1 on to regenerate a published date', async () => {
+    const response = await call(`${URL}?date=2026-11-01&force=1`);
+    expect(await response.json()).toEqual({ date: '2026-11-01', force: true, runId: 'wrun_test' });
+    expect(start).toHaveBeenCalledWith(dailyEpisode, ['2026-11-01', true]);
+  });
+
+  it('needs the secret to force a run', async () => {
+    expect((await call(`${URL}?force=1`, null)).status).toBe(401);
+    expect(start).not.toHaveBeenCalled();
+  });
+
+  it('answers 400 for a force other than 0 or 1', async () => {
+    expect((await call(`${URL}?force=yes`)).status).toBe(400);
+    expect(start).not.toHaveBeenCalled();
   });
 
   it('answers 400 for a malformed date', async () => {

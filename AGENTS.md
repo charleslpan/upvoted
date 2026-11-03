@@ -5,7 +5,7 @@ a Vercel Workflow that runs the pipeline:
 
 1. **select** the day's top stories,
 2. **gather** each story's article and comments into `brief.json`,
-3. **write** a two-host script with Claude,
+3. **write** a script with Claude in the style of NPR's _Up First_: one host, a correspondent per story,
 4. **voice** it with Gemini TTS and **mix** the episode MP3,
 5. **publish** it to `index.json`, which the site's feed reads.
 
@@ -42,9 +42,12 @@ scripts/
   `EpisodeRecord` and `EpisodeIndex`. Each is a zod schema (`BriefSchema`) with its inferred type
   (`Brief`). All of them are plain JSON (dates are ISO strings), so they round-trip through
   `JSON.stringify` unchanged.
-- **`@upvoted/lib/config`** is the show's config (name, time zone, hosts, models, retention),
-  validated with zod at import. Change the hosts, voices, models or the show-wide speaking style
-  (`tts.style`) there.
+  A `Script` runs intro, three stories, sign-off: only the host speaks in the intro and the
+  sign-off, and story `i` is the host and correspondent `i`.
+- **`@upvoted/lib/config`** is the show's config (name, time zone, cast, models, retention),
+  validated with zod at import. The `cast` is one `host` and three `correspondents`;
+  correspondent `i` covers story `i` (`correspondentFor(i)`). Change the cast, voices, models or
+  the show-wide speaking style (`tts.style`) there.
 - **`@upvoted/lib/storage`** is the only way steps read and write files. See Storage below.
 - **`@upvoted/lib/http`** has `fetchWithRetry`, `fetchJson` (timeouts and retries) and
   `createLimiter` (a concurrency cap).
@@ -62,7 +65,7 @@ scripts/
   files directly (`@upvoted/lib/<file>`, `@upvoted/features/<feature>`). `apps/web` compiles
   them through `transpilePackages` in `next.config.ts`; add any new internal package there.
 - **`@upvoted/lib` never imports `@upvoted/types`.** `@upvoted/types` imports
-  `@upvoted/lib/config` (a line's speaker must be one of the configured hosts), so the reverse
+  `@upvoted/lib/config` (a line's speaker must be in the configured cast), so the reverse
   import would be a cycle. Storage takes any zod schema, so it doesn't need the contract.
 - Dependencies go in the package that uses them. Versions shared by several packages live in
   the `catalog:` in `pnpm-workspace.yaml`.
@@ -148,12 +151,13 @@ Node's `fetch` uses it.
 
 `vercel.json` (in `apps/web`) runs `GET /api/cron/daily` at `0 8 * * *`; Hobby fires it some time
 in that hour. The route requires `Authorization: Bearer $CRON_SECRET` (401 otherwise), takes an
-optional `?date=YYYY-MM-DD` (default: today in the show's time zone), and starts `dailyEpisode`
-from `apps/web/workflows/daily-episode.ts` with `start()` from `workflow/api`, answering
-`{ date, runId }`. `next.config.ts` is wrapped with `withWorkflow`.
+optional `?date=YYYY-MM-DD` (default: today in the show's time zone) and `?force=1`, and starts
+`dailyEpisode(date, force)` from `apps/web/workflows/daily-episode.ts` with `start()` from
+`workflow/api`, answering `{ date, force, runId }`. `next.config.ts` is wrapped with `withWorkflow`.
 
 The workflow returns at once if `index.json` already has the date's episode, so a re-run changes
-nothing. Otherwise it runs, as `'use step'` wrappers around `@upvoted/features`: select (with
+nothing. With `force`, it makes the episode again from freshly selected stories and replaces the
+published one. Otherwise it runs, as `'use step'` wrappers around `@upvoted/features`: select (with
 `loadExcludeIds`), three `gatherStory` in parallel, save `brief.json`, three `writeStorySegment`
 in parallel, the bookends and `script.json` + `transcript.md`, one `voiceSegment` per segment in
 parallel, `mixEpisode`, and `publishEpisode`. Steps pass dates, indexes, storage keys and
@@ -173,10 +177,12 @@ mocked.
 `@upvoted/features/voice` turns a `Script` into `episode.mp3`:
 
 - **`voiceSegment(date, index, segment)`** voices one segment with `config.tts.model` through
-  AI Gateway (`generateSpeech`), in Gemini's two-speaker mode: both hosts' voices in
-  `providerOptions.google.multiSpeakerVoiceConfig`, the lines as `turns`, each line's `cue` as
-  its `speechMetadata.style` (`styleForCue` in `speech.ts`), and `config.tts.style` as the
-  `instructions`. Segments longer than one call's budget (`split.ts`: about 4 minutes of audio
+  AI Gateway (`generateSpeech`) with the voices of the cast members in it (`segmentSpeakers`),
+  and `config.tts.style` as the `instructions`. The host-only intro and sign-off use Gemini's
+  single-speaker mode (the lines as `text`, the host's `voice`). A story uses two-speaker mode:
+  the host's and its correspondent's voices in `providerOptions.google.multiSpeakerVoiceConfig`,
+  the lines as `turns`, and each line's `cue` as its `speechMetadata.style` (`styleForCue` in
+  `speech.ts`). Segments longer than one call's budget (`split.ts`: about 4 minutes of audio
   and 4,000 input tokens, well inside Gemini's 8,192-token, ~10.9-minute limits) are split at
   whole turns, voiced at once and joined. It warns when a call's audio is far from what its
   word count predicts, which is how Gemini's voice swaps and dropped lines tend to show up.

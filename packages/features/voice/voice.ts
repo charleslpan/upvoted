@@ -2,7 +2,7 @@ import { keys, putFile } from '@upvoted/lib/storage';
 import type { Segment } from '@upvoted/types';
 import { fakeAdapter } from './fake';
 import { geminiAdapter } from './gemini';
-import { dialogueRequest, type SpeechAdapter, toTurn } from './speech';
+import { dialogueRequest, type SpeechAdapter, segmentSpeakers, toTurn } from './speech';
 import { countWords, estimateTokens, predictedSec, splitTurns } from './split';
 import { encodeWav, joinPcm, parseWav, pcmDurationSec } from './wav';
 
@@ -19,8 +19,9 @@ export function defaultAdapter(): SpeechAdapter {
 }
 
 /**
- * Voices one segment with the two hosts' voices and saves it as a WAV at
- * `keys.segment(date, index)`. Returns the storage key and the audio's length.
+ * Voices one segment with the voices of the cast members in it (the host alone, or the host
+ * and one correspondent) and saves it as a WAV at `keys.segment(date, index)`. Returns the
+ * storage key and the audio's length.
  *
  * A long segment is split at whole turns into calls under Gemini's per-call limits. The calls
  * run at once, and their audio is joined in order.
@@ -33,14 +34,15 @@ export async function voiceSegment(
 ): Promise<{ key: string; durationSec: number }> {
   const key = keys.segment(date, index);
   const turns = segment.lines.map(toTurn);
-  const empty = dialogueRequest([]);
+  const speakers = segmentSpeakers(segment);
+  const empty = dialogueRequest(speakers, []);
   const fixedTokens = estimateTokens(empty.instructions + JSON.stringify(empty.speakers));
   const calls = splitTurns(turns, fixedTokens);
 
   const chunks = await Promise.all(
     calls.map(async (callTurns, i) => {
       const started = performance.now();
-      const wav = await adapter.synthesize(dialogueRequest(callTurns), {
+      const wav = await adapter.synthesize(dialogueRequest(speakers, callTurns), {
         abortSignal: AbortSignal.timeout(CALL_TIMEOUT_MS),
       });
       const pcm = parseWav(wav);

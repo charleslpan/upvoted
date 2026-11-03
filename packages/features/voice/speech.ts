@@ -1,12 +1,13 @@
 import { config } from '@upvoted/lib/config';
-import type { Line } from '@upvoted/types';
+import type { Line, Segment } from '@upvoted/types';
 
 /**
- * What a text-to-speech adapter voices in one call: a stretch of two-host dialogue. Gemini takes
- * this as multi-speaker `turns`; the fake adapter turns it into tones for tests and dry runs.
+ * What a text-to-speech adapter voices in one call: a stretch of a segment, by the host alone or
+ * by the host and one correspondent. Gemini takes one speaker as plain text and two as
+ * multi-speaker `turns`; the fake adapter turns it into tones for tests and dry runs.
  */
 export interface DialogueTurn {
-  /** One of the hosts' names. */
+  /** A cast member's name. */
   speaker: string;
   text: string;
   /** A delivery direction for this turn; without one, the call's `instructions` apply. */
@@ -14,7 +15,7 @@ export interface DialogueTurn {
 }
 
 export interface DialogueRequest {
-  /** Each host's name and prebuilt voice, in config order. */
+  /** The segment's speakers and their prebuilt voices, the host first: one or two. */
   speakers: { name: string; voice: string }[];
   turns: DialogueTurn[];
   /** The show-wide delivery style. */
@@ -39,7 +40,6 @@ const CUE_STYLES: Record<string, string> = {
   thoughtful: 'thoughtful and unhurried',
   serious: 'serious and measured',
   surprised: 'genuinely surprised',
-  interrupting: 'cutting in quickly, overlapping the other host',
   sighs: 'with a small sigh',
   wry: 'wry, deadpan',
 };
@@ -58,10 +58,17 @@ export function toTurn(line: Line): DialogueTurn {
     : { speaker: line.speaker, text: line.text };
 }
 
-export function dialogueRequest(turns: DialogueTurn[]): DialogueRequest {
-  return {
-    speakers: config.hosts.map((host) => ({ name: host.name, voice: host.voice })),
-    turns,
-    instructions: config.tts.style,
-  };
+/** The cast members who speak in the segment, with their voices, the host first. */
+export function segmentSpeakers(segment: Segment): DialogueRequest['speakers'] {
+  const { host, correspondents } = config.cast;
+  return [host, ...correspondents]
+    .filter((member) => segment.lines.some((line) => line.speaker === member.name))
+    .map(({ name, voice }) => ({ name, voice }));
+}
+
+export function dialogueRequest(
+  speakers: DialogueRequest['speakers'],
+  turns: DialogueTurn[],
+): DialogueRequest {
+  return { speakers, turns, instructions: config.tts.style };
 }

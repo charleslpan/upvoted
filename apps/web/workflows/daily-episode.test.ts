@@ -48,7 +48,7 @@ beforeEach(() => {
   mocks.selectStories.mockResolvedValue(refs);
   mocks.gatherStory.mockImplementation(async (ref: StoryRef) => story(ref));
   mocks.writeStorySegment.mockImplementation(async (brief, index: number) =>
-    segment('story', brief.stories[index].id),
+    segment('story', brief.stories[index].id, index),
   );
   mocks.writeBookends.mockResolvedValue({ intro: segment('intro'), signoff: segment('signoff') });
   mocks.voiceSegment.mockImplementation(async (date: string, index: number) => ({
@@ -120,6 +120,23 @@ describe('dailyEpisode', () => {
 
     for (const mock of Object.values(mocks)) expect(mock).not.toHaveBeenCalled();
     expect(await loadIndex()).toEqual(before);
+  });
+
+  it('makes the episode again and replaces it when forced', async () => {
+    await publishEpisode({ ...episode(DATE), title: 'The old format' });
+
+    expect(await dailyEpisode(DATE, true)).toEqual({ date: DATE, status: 'published', audio });
+
+    expect(mocks.selectStories).toHaveBeenCalledOnce();
+    expect(mocks.mixEpisode).toHaveBeenCalledOnce();
+    const script = await getJson(keys.script(DATE), ScriptSchema);
+    const { episodes } = await loadIndex();
+    expect(episodes).toHaveLength(1);
+    expect(episodes[0]).toMatchObject({
+      date: DATE,
+      title: script?.title,
+      publishedAt: '2026-11-03T08:10:00.000Z',
+    });
   });
 
   it('publishes nothing when a step fails', async () => {

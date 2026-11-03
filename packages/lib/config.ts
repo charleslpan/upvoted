@@ -14,8 +14,8 @@ function isTimeZone(value: string): boolean {
   }
 }
 
-const HostSchema = z.object({
-  /** How the host is named in scripts and transcripts. */
+const CastMemberSchema = z.object({
+  /** How the cast member is named in scripts and transcripts. */
   name: z.string().min(1),
   /** A Gemini TTS prebuilt voice name, such as `Kore` or `Puck`. */
   voice: z.string().min(1),
@@ -38,9 +38,20 @@ const ConfigSchema = z.object({
     /** The show-wide delivery style. A line's cue overrides it for that line. */
     style: z.string().min(1),
   }),
-  hosts: z
-    .tuple([HostSchema, HostSchema])
-    .refine(([a, b]) => a.name !== b.name, 'The two hosts need different names'),
+  cast: z
+    .object({
+      /** The anchor: alone in the cold open and the sign-off, and the questioner in each story. */
+      host: CastMemberSchema,
+      /** Correspondent `i` covers story `i`, one story each. */
+      correspondents: z.tuple([CastMemberSchema, CastMemberSchema, CastMemberSchema]),
+    })
+    .refine(({ host, correspondents }) => {
+      const members = [host, ...correspondents];
+      return (
+        new Set(members.map((m) => m.name)).size === members.length &&
+        new Set(members.map((m) => m.voice)).size === members.length
+      );
+    }, 'Every cast member needs their own name and voice'),
   retention: z.object({
     /** How many episodes the index (and Blob) keeps. */
     episodes: z.int().positive(),
@@ -50,7 +61,7 @@ const ConfigSchema = z.object({
 });
 
 export type Config = z.infer<typeof ConfigSchema>;
-export type Host = z.infer<typeof HostSchema>;
+export type CastMember = z.infer<typeof CastMemberSchema>;
 
 function siteUrl(): string {
   const url =
@@ -66,8 +77,8 @@ export const config: Config = ConfigSchema.parse({
     name: 'Upvoted',
     author: 'Charles Pan',
     description:
-      'The three biggest Hacker News stories of the day, talked through by two hosts in about ' +
-      'twelve minutes. Upvoted is AI-generated: the stories are picked automatically, the script ' +
+      'The three biggest Hacker News stories of the day in about twelve minutes, from an anchor ' +
+      'and a correspondent for each story. Upvoted is AI-generated: the stories are picked automatically, the script ' +
       'is written by Claude, and the voices are synthetic. It is not affiliated with Hacker News ' +
       'or Y Combinator.',
     timezone: 'America/New_York',
@@ -79,16 +90,29 @@ export const config: Config = ConfigSchema.parse({
     // Moving up to 'google/gemini-3.8-flash-tts' is a one-line change.
     model: 'google/gemini-3.8-flash-lite-tts',
     style:
-      'A warm, relaxed morning-show conversation between two friends who know tech well. ' +
-      'Natural pace, easy laughter, never announcer-like.',
+      'A public-radio morning news show: a measured, warm, clear anchor and well-informed ' +
+      'correspondents. Conversational but composed, with crisp diction, an unhurried pace and ' +
+      'no filler. Never hyped, never announcer-like.',
   },
-  // Gemini prebuilt voices: Sulafat is "warm", Achird is "friendly".
-  hosts: [
-    { name: 'Maya', voice: 'Sulafat' },
-    { name: 'Theo', voice: 'Achird' },
-  ],
+  // Gemini prebuilt voices: Sulafat is "warm", Charon "informative", Erinome "clear" and
+  // Sadaltager "knowledgeable".
+  cast: {
+    host: { name: 'Maya', voice: 'Sulafat' },
+    correspondents: [
+      { name: 'Theo', voice: 'Charon' },
+      { name: 'Nadia', voice: 'Erinome' },
+      { name: 'Felix', voice: 'Sadaltager' },
+    ],
+  },
   // The site shows only the latest episode; a week of records covers the story exclusion.
   retention: { episodes: 7, excludeDays: 7 },
 });
 
 export default config;
+
+/** The correspondent who covers story `index` (0-based) of an episode. */
+export function correspondentFor(index: number): CastMember {
+  const correspondent = config.cast.correspondents[index];
+  if (!correspondent) throw new RangeError(`No correspondent covers story ${index}`);
+  return correspondent;
+}

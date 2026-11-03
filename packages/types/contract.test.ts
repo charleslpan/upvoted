@@ -10,7 +10,12 @@ import {
   type Story,
 } from './contract';
 
-const [maya, theo] = config.hosts.map((host) => host.name) as [string, string];
+const maya = config.cast.host.name;
+const [theo, nadia, felix] = config.cast.correspondents.map((member) => member.name) as [
+  string,
+  string,
+  string,
+];
 
 function story(id: number, points: number): Story {
   return {
@@ -44,23 +49,33 @@ const brief: Brief = {
   stories: [story(1, 300), story(2, 200), story(3, 100)],
 };
 
+const storySegment = (storyId: number, correspondent: string) => ({
+  kind: 'story' as const,
+  storyId,
+  lines: [
+    { speaker: maya, text: `${correspondent} has been following this. Good morning.` },
+    { speaker: correspondent, text: `Good morning, ${maya}.`, cue: 'chuckles' },
+  ],
+});
+
 const script: Script = {
   date: '2026-11-03',
   title: 'Upvoted for Tuesday, November 3',
   description: 'Show notes.',
   segments: [
     { kind: 'intro', storyId: null, lines: [{ speaker: maya, text: 'This is Upvoted.' }] },
-    {
-      kind: 'story',
-      storyId: 1,
-      lines: [
-        { speaker: maya, text: 'First up.' },
-        { speaker: theo, text: 'Big one.', cue: 'excited' },
-      ],
-    },
-    { kind: 'signoff', storyId: null, lines: [{ speaker: theo, text: 'See you tomorrow.' }] },
+    storySegment(1, theo),
+    storySegment(2, nadia),
+    storySegment(3, felix),
+    { kind: 'signoff', storyId: null, lines: [{ speaker: maya, text: 'See you tomorrow.' }] },
   ],
 };
+
+/** The script with segment `i` replaced. */
+const withSegment = (i: number, segment: unknown) => ({
+  ...script,
+  segments: script.segments.map((s, j) => (j === i ? segment : s)),
+});
 
 const roundTrip = <T>(value: T): unknown => JSON.parse(JSON.stringify(value));
 
@@ -91,47 +106,80 @@ describe('Script', () => {
     expect(ScriptSchema.parse(roundTrip(script))).toEqual(script);
   });
 
-  it('rejects a speaker who is not one of the two hosts', () => {
-    const result = ScriptSchema.safeParse({
-      ...script,
-      segments: [{ kind: 'intro', storyId: null, lines: [{ speaker: 'Bob', text: 'Hi.' }] }],
-    });
+  it('rejects a speaker who is not in the cast', () => {
+    const result = ScriptSchema.safeParse(
+      withSegment(0, { kind: 'intro', storyId: null, lines: [{ speaker: 'Bob', text: 'Hi.' }] }),
+    );
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.path).toEqual(['segments', 0, 'lines', 0, 'speaker']);
   });
 
-  it('rejects more than two speakers in a segment', () => {
-    const lines = [maya, theo, 'Guest'].map((speaker) => ({ speaker, text: 'Hello.' }));
-    const result = ScriptSchema.safeParse({
-      ...script,
-      segments: [{ kind: 'story', storyId: 1, lines }],
-    });
+  it.each([
+    [0, 'intro'],
+    [4, 'signoff'],
+  ] as const)('lets only the host speak in the %s', (i, kind) => {
+    const lines = [
+      { speaker: maya, text: 'Hello.' },
+      { speaker: theo, text: 'Hello.' },
+    ];
+    const result = ScriptSchema.safeParse(withSegment(i, { kind, storyId: null, lines }));
     expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toBe(`Only the host, ${maya}, speaks in the ${kind}`);
+  });
+
+  it('needs the host and exactly one correspondent in a story', () => {
+    const hostOnly = { kind: 'story', storyId: 1, lines: [{ speaker: maya, text: 'Hi.' }] };
+    const twoCorrespondents = {
+      ...storySegment(1, theo),
+      lines: [...storySegment(1, theo).lines, { speaker: nadia, text: 'And me.' }],
+    };
+    for (const segment of [hostOnly, twoCorrespondents]) {
+      const result = ScriptSchema.safeParse(withSegment(1, segment));
+      expect(result.success).toBe(false);
+      expect(result.error?.issues[0]?.message).toBe(
+        `A story segment is the host, ${maya}, and exactly one correspondent`,
+      );
+    }
+  });
+
+  it("gives each story its own correspondent, in the cast's order", () => {
+    const result = ScriptSchema.safeParse(withSegment(2, storySegment(2, felix)));
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toBe(`Story 2 is ${nadia}'s, not ${felix}'s`);
+  });
+
+  it('needs the intro, three stories and the sign-off, in that order', () => {
+    const missing = { ...script, segments: script.segments.slice(0, 4) };
+    const result = ScriptSchema.safeParse(missing);
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toBe(
+      'The segments must run intro, story, story, story, signoff',
+    );
   });
 
   it('needs a storyId on a story segment', () => {
-    const result = ScriptSchema.safeParse({
-      ...script,
-      segments: [{ kind: 'story', storyId: null, lines: [{ speaker: maya, text: 'Hi.' }] }],
-    });
+    const result = ScriptSchema.safeParse(
+      withSegment(1, { ...storySegment(1, theo), storyId: null }),
+    );
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.message).toBe('A story segment needs a storyId');
   });
 
-  it.each(['intro', 'signoff'] as const)('rejects a storyId on an %s segment', (kind) => {
-    const result = ScriptSchema.safeParse({
-      ...script,
-      segments: [{ kind, storyId: 1, lines: [{ speaker: maya, text: 'Hi.' }] }],
-    });
+  it.each([
+    [0, 'intro'],
+    [4, 'signoff'],
+  ] as const)('rejects a storyId on the %s', (i, kind) => {
+    const result = ScriptSchema.safeParse(
+      withSegment(i, { kind, storyId: 1, lines: [{ speaker: maya, text: 'Hi.' }] }),
+    );
     expect(result.success).toBe(false);
-    expect(result.error?.issues[0]?.path).toEqual(['segments', 0, 'storyId']);
+    expect(result.error?.issues[0]?.path).toEqual(['segments', i, 'storyId']);
   });
 
   it('rejects a segment with no lines', () => {
-    const result = ScriptSchema.safeParse({
-      ...script,
-      segments: [{ kind: 'intro', storyId: null, lines: [] }],
-    });
+    const result = ScriptSchema.safeParse(
+      withSegment(0, { kind: 'intro', storyId: null, lines: [] }),
+    );
     expect(result.success).toBe(false);
   });
 });
