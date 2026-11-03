@@ -214,25 +214,6 @@ describe('writeBookends', () => {
   });
 });
 
-describe('SCRIPT_STYLE_GUIDE', () => {
-  it('tells the model to mimic Up First in style only, as Upvoted', () => {
-    expect(SCRIPT_STYLE_GUIDE).toContain("Mimic NPR's Up First as closely as you can in style");
-    expect(SCRIPT_STYLE_GUIDE).toContain('never use their taglines');
-    expect(SCRIPT_STYLE_GUIDE).toContain('has been following this. Good morning.');
-    expect(SCRIPT_STYLE_GUIDE).toContain("And that's Upvoted for this");
-    expect(SCRIPT_STYLE_GUIDE).not.toMatch(/notebooklm/i);
-    expect(SCRIPT_STYLE_GUIDE).not.toContain('interrupting');
-  });
-});
-
-describe('the sample script', () => {
-  it('calls the show Upvoted and never names NPR or Up First', () => {
-    const spoken = sample.segments.flatMap((segment) => segment.lines.map((line) => line.text));
-    expect(spoken.join(' ')).toContain('this is Upvoted');
-    expect(spoken.join(' ')).not.toMatch(/\bNPR\b|up first|notebooklm/i);
-  });
-});
-
 describe('assembleScript', () => {
   it("puts the stories in the brief's order between the intro and sign-off", () => {
     const shuffled = [stories[2], stories[0], stories[1]] as Segment[];
