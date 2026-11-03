@@ -1,0 +1,17 @@
+packages:
+  - apps/*
+  - packages/*
+
+# Versions shared by several packages. Reference them as "catalog:" in a package.json.
+catalog:
+  "@types/node": ^22.20.5
+  typescript: ^6.0.3
+  vitest: ^5.1.0
+  zod: ^4.6.7
+
+# Dependencies allowed to run install scripts. ffmpeg-static downloads its binary on install.
+allowBuilds:
+  "@swc/core": false
+  cbor-extract: false
+  esbuild: false
+  ffmpeg-static: true
