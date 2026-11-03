@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { NextConfig } from 'next';
+import { withWorkflow } from 'workflow/next';
 
 const repoRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
@@ -20,9 +21,9 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ['ffmpeg-static'],
   outputFileTracingIncludes: {
     '/api/health/ffmpeg': ffmpegFiles,
-    // Vercel Workflow runs every step through its generated routes.
+    // Vercel Workflow runs every step (the mix among them) through its generated routes.
     '/.well-known/workflow/**/*': ffmpegFiles,
   },
 };
 
-export default nextConfig;
+export default withWorkflow(nextConfig);

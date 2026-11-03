@@ -1,13 +1,18 @@
 import './env';
 import { parseArgs } from 'node:util';
-import { loadExcludeIds, publishEpisode } from '@upvoted/features/episodes';
+import { episodeRecord, loadExcludeIds, publishEpisode } from '@upvoted/features/episodes';
 import {
   assembleScript,
   renderTranscript,
   writeBookends,
   writeStorySegment,
 } from '@upvoted/features/script';
-import { gatherStory, selectStories } from '@upvoted/features/stories';
+import {
+  CRON_HOUR_UTC,
+  gatherStory,
+  selectionTime,
+  selectStories,
+} from '@upvoted/features/stories';
 import { mixEpisode, voiceSegment } from '@upvoted/features/voice';
 import { config } from '@upvoted/lib/config';
 import { episodeDate } from '@upvoted/lib/dates';
@@ -17,7 +22,6 @@ import {
   type Brief,
   BriefSchema,
   EpisodeDateSchema,
-  type EpisodeRecord,
   type Script,
   ScriptSchema,
 } from '@upvoted/types';
@@ -32,9 +36,6 @@ const STAGES = ['gather', 'write', 'voice', 'mix', 'publish'] as const;
 type Stage = (typeof STAGES)[number];
 /** Stages a run can start at; publish needs the mix's result, which isn't saved on its own. */
 const START_STAGES = ['gather', 'write', 'voice', 'mix'] as const;
-
-/** The daily cron fires in this hour (UTC). */
-const CRON_HOUR_UTC = 8;
 
 const USAGE = `Usage: pnpm episode [--date YYYY-MM-DD] [--from STAGE] [--until STAGE]
 
@@ -97,19 +98,16 @@ async function main(): Promise<void> {
   console.log(`  ${audio.key}: ${formatDuration(audio.durationSec)}, ${audio.bytes} bytes`);
   if (until === 'mix') return;
 
-  const record: EpisodeRecord = {
-    date,
-    title: script.title,
-    description: script.description,
-    audio,
-    storyIds: brief.stories.map((story) => story.id),
-    publishedAt: new Date().toISOString(),
-  };
-  await stage('publish', () => publishEpisode(record));
+  const record = episodeRecord(brief, script, audio, new Date());
+  await stage('publish', async () => {
+    const dropped = await publishEpisode(record);
+    console.log(`  Published ${record.date} to ${keys.index}`);
+    if (dropped.length > 0) console.log(`  Pruned ${dropped.join(', ')}`);
+  });
 }
 
 async function gather(date: string, selectAt: Date): Promise<Brief> {
-  const excludeIds = await recentlyCoveredIds(selectAt);
+  const excludeIds = await loadExcludeIds(selectAt);
   const refs = await selectStories(selectAt, excludeIds);
   const stories = await Promise.all(refs.map(gatherStory));
   const brief = BriefSchema.parse({ date, generatedAt: new Date().toISOString(), stories });
@@ -150,23 +148,6 @@ async function voice(script: Script): Promise<string[]> {
   for (const { key, durationSec } of voiced)
     console.log(`  ${key}: ${formatDuration(durationSec)}`);
   return voiced.map((segment) => segment.key);
-}
-
-/** Until the publish task lands, nothing is excluded. */
-async function recentlyCoveredIds(now: Date): Promise<number[]> {
-  try {
-    return await loadExcludeIds(now);
-  } catch (error) {
-    if (!(error instanceof NotImplementedError)) throw error;
-    console.log(`  ${error.message}; not excluding recently covered stories.`);
-    return [];
-  }
-}
-
-/** Stories are picked as the cron picks them: from the 24 hours before its run that day. */
-function selectionTime(date: string, now: Date): Date {
-  const cronTime = new Date(`${date}T${String(CRON_HOUR_UTC).padStart(2, '0')}:00:00Z`);
-  return cronTime < now ? cronTime : now;
 }
 
 async function stage<T>(name: Stage, run: () => Promise<T>): Promise<T> {
