@@ -1,0 +1,185 @@
+{
+  "date": "2026-11-03",
+  "title": "Tuesday, November 3: Astra can read and write weights to improve Qwen, and two more",
+  "description": "The three biggest Hacker News stories for Tuesday, November 3.\n\n1. Astra can read and write weights to improve Qwen\n   Article: https://rikiyat.github.io/blog/weight-space-programming/\n   Discussion: https://news.ycombinator.com/item?id=50341174\n\n2. WTF Ubuntu?\n   Article: https://chalmovsky.com/posts/wtf-ubuntu\n   Discussion: https://news.ycombinator.com/item?id=50337608\n\n3. Show HN: Subvocal – Talk to your computer without making noise\n   Discussion: https://news.ycombinator.com/item?id=50340088",
+  "segments": [
+    {
+      "kind": "intro",
+      "storyId": null,
+      "lines": [
+        {
+          "speaker": "Maya",
+          "text": "This is Upvoted, the top of Hacker News for Tuesday, November 3. I'm Maya."
+        },
+        { "speaker": "Theo", "text": "And I'm Theo. Big one today: an AI model that reads neural network weights like it's reading code." },
+        { "speaker": "Maya", "text": "Then a critical Linux bug that Debian fixed weeks ago, and Ubuntu still hasn't." },
+        {
+          "speaker": "Theo",
+          "text": "And glasses that let you talk to your computer without making a sound.",
+          "cue": "excited"
+        },
+        { "speaker": "Maya", "text": "Let's get into it." }
+      ]
+    },
+    {
+      "kind": "story",
+      "storyId": 50341174,
+      "lines": [
+        {
+          "speaker": "Maya",
+          "text": "Okay, so the top story, with about twenty-nine hundred points, is a blog post called Weight-Space Programming. The claim is that GPT-6 Astra can look at the raw weights of a neural network and work out what it does."
+        },
+        { "speaker": "Theo", "text": "Just the numbers? No running it?", "cue": "skeptical" },
+        {
+          "speaker": "Maya",
+          "text": "Just the numbers. They handed it about seventeen thousand weights from a tiny network trained to play a video game, no tools, and it said Breakout, ninety-nine percent confident."
+        },
+        { "speaker": "Theo", "text": "Huh. Okay, that's a fun party trick, but—" },
+        {
+          "speaker": "Maya",
+          "text": "But wait, it gets bigger. They asked it to make Qwen three point five, a small open model, better at math. No training at all."
+        },
+        { "speaker": "Theo", "text": "So what did it actually change?" },
+        {
+          "speaker": "Maya",
+          "text": "It noticed the model kept getting stuck in reasoning loops. Eighty-five of its first ninety-six practice answers just ran until they hit the length limit. Astra traced that to one direction in two of its layers and subtracted it out."
+        },
+        { "speaker": "Theo", "text": "Like finding the one stuck key on a keyboard and popping it off." },
+        {
+          "speaker": "Maya",
+          "text": "Pretty much. It touched a tiny fraction of a percent of the weights, and the math benchmark went from about eight percent to forty-eight.",
+          "cue": "excited"
+        },
+        {
+          "speaker": "Theo",
+          "text": "Right, and that's exactly where the thread pumps the brakes. One commenter who says they do research in weight-space learning basically begged people to read the paper before losing their minds. Their take is that the write-up oversells it."
+        },
+        { "speaker": "Maya", "text": "Because Qwen already knew the math?" },
+        {
+          "speaker": "Theo",
+          "text": "That's the argument, yeah. It wasn't taught anything new, it was un-stuck. And a few people pointed out that removing a direction that causes looping was already a known technique."
+        },
+        {
+          "speaker": "Maya",
+          "text": "Someone also brought receipts on how old this field is. Predicting and generating weights goes back years. One person said their master's thesis in twenty eighteen was on it."
+        },
+        { "speaker": "Theo", "text": "And not everyone could reproduce it. Somebody tried the same trick on a small model that turns plain English into shell commands. It fixed some mistakes and broke others. No net gain.", "cue": "sighs" },
+        {
+          "speaker": "Maya",
+          "text": "Though on the other side, one commenter ran the same prompts on a Qwen model on their own laptop, and it got Pac-Man, Breakout and Pong. It only missed Freeway."
+        },
+        { "speaker": "Theo", "text": "Which, to be fair, I'd miss too.", "cue": "laughs" },
+        {
+          "speaker": "Maya",
+          "text": "So where it lands: maybe not magic, but a lot of people upvoted just because they hadn't realized this was possible at all."
+        },
+        { "speaker": "Theo", "text": "And they want to see where it goes as the models get bigger. Fair enough." }
+      ]
+    },
+    {
+      "kind": "story",
+      "storyId": 50337608,
+      "lines": [
+        {
+          "speaker": "Theo",
+          "text": "Story two has a title I'll paraphrase as: what on earth, Ubuntu? It's about a Linux kernel bug, rated nine point eight out of ten on the CVSS scale."
+        },
+        { "speaker": "Maya", "text": "That's about as bad as it goes, right?" },
+        {
+          "speaker": "Theo",
+          "text": "Close to it. It's in the kernel's networking code, it's been there since twenty sixteen, and it can be hit remotely. Anthropic says it built a working exploit that gets root on a server."
+        },
+        { "speaker": "Maya", "text": "Oof. So everyone just patches, right?" },
+        {
+          "speaker": "Theo",
+          "text": "Debian shipped a fix on October sixteenth. The author says that, more than two weeks later, every supported Ubuntu release was still listed as vulnerable. LTS included."
+        },
+        { "speaker": "Maya", "text": "Wait, really?", "cue": "curious" },
+        {
+          "speaker": "Theo",
+          "text": "Really. And they're angry about it. They point out that volunteer distros shipped the fix while Canonical, which sells security subscriptions, hadn't. They took their Ubuntu servers offline and say they're moving off for good."
+        },
+        { "speaker": "Maya", "text": "Okay, but I want the other side. Is it actually as dangerous as nine point eight sounds?", "cue": "skeptical" },
+        {
+          "speaker": "Theo",
+          "text": "That's a real debate in the thread. One commenter noted the predicted chance of exploitation is under one percent, and that most advisories describe a crash, not a takeover. Anthropic is the main source for the root exploit."
+        },
+        { "speaker": "Maya", "text": "Huh. So it's partly a communications problem." },
+        {
+          "speaker": "Theo",
+          "text": "That's how a few people put it. Ubuntu's own page labels it high priority, not critical, and the link explaining why is, well, almost empty."
+        },
+        { "speaker": "Maya", "text": "Did Canonical say anything?" },
+        {
+          "speaker": "Theo",
+          "text": "Someone from Canonical's product team showed up. They said fixes for twenty-two oh four and newer are in the proposed pocket, being tested for stability, and they've published a blog post with details."
+        },
+        { "speaker": "Maya", "text": "And the replies were, let me guess—" },
+        { "speaker": "Theo", "text": "Three weeks is plenty of time. Yep.", "cue": "chuckles" },
+        {
+          "speaker": "Maya",
+          "text": "To be fair, someone else warned that one of those proposed kernels has serious regressions. So rushing has its own cost."
+        },
+        {
+          "speaker": "Theo",
+          "text": "Right. And one commenter thought the post itself was more outrage than detail. But others said a company charging for security gets held to a higher bar."
+        }
+      ]
+    },
+    {
+      "kind": "story",
+      "storyId": 50340088,
+      "lines": [
+        {
+          "speaker": "Maya",
+          "text": "Last one, and it's a Show H N. Two founders, Aarush and Arnav, built smart glasses that let you talk to your computer silently. You just mouth the words."
+        },
+        { "speaker": "Theo", "text": "Mouth them. Like, no sound at all?" },
+        {
+          "speaker": "Maya",
+          "text": "No sound. The glasses send out radio waves, sort of like Bluetooth, that pass through your face. Your tongue and lips change the signal, and their models decode that into text."
+        },
+        { "speaker": "Theo", "text": "Okay, that's either brilliant or terrifying.", "cue": "laughs" },
+        {
+          "speaker": "Maya",
+          "text": "Maybe both! The origin story's great, though. They were computer science students at Georgia Tech, and at a hackathon they tried it with electrodes stuck on one founder's face."
+        },
+        { "speaker": "Theo", "text": "Which I'm guessing didn't ship." },
+        {
+          "speaker": "Maya",
+          "text": "Nope. Sweat, interference, and, their words, nobody wants electrodes on their face. So they switched to radio, and they got it working across different people by paying folks to sit in booths and read prompts while wearing the glasses."
+        },
+        {
+          "speaker": "Theo",
+          "text": "I'll be the skeptic. Do people even talk faster than they type? One commenter said they read aloud slower than they think."
+        },
+        {
+          "speaker": "Maya",
+          "text": "The founder answered that: most people type forty to fifty words a minute, and talk at a hundred twenty to two hundred."
+        },
+        { "speaker": "Theo", "text": "Fair. What about privacy, though? Something reading your mouth all day." },
+        {
+          "speaker": "Maya",
+          "text": "That came up a lot. Some people said they'd only use it if it ran fully offline. Right now, the founder said, decoding happens in a companion app, in the cloud.",
+          "cue": "thoughtful"
+        },
+        {
+          "speaker": "Theo",
+          "text": "And the accessibility angle seemed huge. One person scheduled for carpal tunnel surgery on both hands said it's exactly what they've been looking for."
+        },
+        { "speaker": "Maya", "text": "And someone pointed out it could help people with tracheostomies, who can move their mouths but can't use their voice." },
+        { "speaker": "Theo", "text": "Plus my favorite request: please keep adjustable nose pads, from a commenter who says they have a big nose." },
+        { "speaker": "Maya", "text": "And the founder said yes! They're aiming to ship in the first quarter of twenty twenty-seven." }
+      ]
+    },
+    {
+      "kind": "signoff",
+      "storyId": null,
+      "lines": [
+        { "speaker": "Theo", "text": "That's Upvoted for today. Weights you can read, a patch that's late, and glasses you can whisper to without whispering." },
+        { "speaker": "Maya", "text": "Links to everything are in the show notes. Thanks for listening, and we'll be back tomorrow with the top of Hacker News." },
+        { "speaker": "Theo", "text": "See you then.", "cue": "chuckles" }
+      ]
+    }
+  ]
+}
