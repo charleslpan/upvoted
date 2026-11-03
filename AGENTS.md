@@ -39,7 +39,8 @@ scripts/
   (`Brief`). All of them are plain JSON (dates are ISO strings), so they round-trip through
   `JSON.stringify` unchanged.
 - **`@upvoted/lib/config`** is the show's config (name, time zone, hosts, models, retention),
-  validated with zod at import. Change the hosts, voices or models there.
+  validated with zod at import. Change the hosts, voices, models or the show-wide speaking style
+  (`tts.style`) there.
 - **`@upvoted/lib/storage`** is the only way steps read and write files. See Storage below.
 - **`@upvoted/lib/http`** has `fetchWithRetry`, `fetchJson` (timeouts and retries) and
   `createLimiter` (a concurrency cap).
@@ -98,6 +99,10 @@ The local runner (`scripts/episode.ts`) runs the stages in order, `gather`, `wri
   `out/episodes/<date>/brief.json`.
 - When the runner reaches a step that is still a stub, it stops with a message naming it.
   Everything before that step has been saved.
+- `pnpm episode --until mix` voices and mixes the episode. With `UPVOTED_FAKE_VOICES=1` the
+  voice stage uses tones instead of Gemini, so `--from voice --until mix` makes a sample mix
+  from a saved script with no API key. The mix deletes the segment WAVs once the MP3 is saved,
+  so rerun `--from voice` rather than `--from mix`.
 
 The runner loads `.env.local` and `.env` from the root, then `apps/web/.env.local`, where
 `vercel env pull` writes. It never overrides a variable that's already set. For model calls set
@@ -129,6 +134,43 @@ Node's `fetch` uses it.
 - The config (`@upvoted/lib/config`) and the contract (`@upvoted/types`) are shared by every
   step. Change them deliberately, and update the tests and this file with them.
 
+## Voice and mix
+
+`@upvoted/features/voice` turns a `Script` into `episode.mp3`:
+
+- **`voiceSegment(date, index, segment)`** voices one segment with `config.tts.model` through
+  AI Gateway (`generateSpeech`), in Gemini's two-speaker mode: both hosts' voices in
+  `providerOptions.google.multiSpeakerVoiceConfig`, the lines as `turns`, each line's `cue` as
+  its `speechMetadata.style` (`styleForCue` in `speech.ts`), and `config.tts.style` as the
+  `instructions`. Segments longer than one call's budget (`split.ts`: about 4 minutes of audio
+  and 4,000 input tokens, well inside Gemini's 8,192-token, ~10.9-minute limits) are split at
+  whole turns, voiced at once and joined. It warns when a call's audio is far from what its
+  word count predicts, which is how Gemini's voice swaps and dropped lines tend to show up.
+  Adapters implement `SpeechAdapter` (`gemini.ts`, and `fake.ts` for tests and dry runs).
+- **`mixEpisode(date, segmentKeys)`** runs ffmpeg once: the theme, the intro, a sting before
+  each story segment, the stories, the sign-off and the theme's tail, with short pauses. The
+  music is synthesized in the filtergraph (`music.ts`), so there are no audio files to license.
+  Segment kinds come from the saved `script.json` (or from position when it's missing). The
+  episode is loudness-normalized to −16 LUFS and encoded as a 44.1 kHz mono 96 kbps MP3 with
+  ID3 tags.
+
+**ffmpeg on Vercel.** The binary comes from `ffmpeg-static`, a dependency of
+`@upvoted/features` whose install script downloads it (allowed in `allowBuilds` in
+`pnpm-workspace.yaml`). `FFMPEG_BIN` overrides the path. `ffmpeg-static` finds the binary next
+to its own `index.js` at runtime, which Next.js's file tracing can't see, so
+`apps/web/next.config.ts`:
+
+- sets `outputFileTracingRoot` to the repo root, where pnpm keeps `node_modules/.pnpm`,
+- lists `ffmpeg-static` in `serverExternalPackages`, so it is required from `node_modules`
+  rather than bundled, and
+- adds the binary with `outputFileTracingIncludes` to `/api/health/ffmpeg` and to Vercel
+  Workflow's generated routes (`/.well-known/workflow/**/*`).
+
+Any other route that calls `mixEpisode` needs its own entry there. Check a build with
+`grep ffmpeg-static/ffmpeg apps/web/.next/server/app/<route>/route.js.nft.json`, and a
+deployment with `curl -H "Authorization: Bearer $CRON_SECRET" <url>/api/health/ffmpeg`, which
+answers the first line of `ffmpeg -version`.
+
 ## Storage
 
 `@upvoted/lib/storage` exports `putJson(key, value)`, `getJson(key, schema)` (null when missing),
@@ -155,7 +197,9 @@ cached by the CDN for 60 seconds. Without the token it uses the local filesystem
 
 - `AI_GATEWAY_API_KEY`: local runs only. Deployments use Vercel's OIDC token.
 - `BLOB_READ_WRITE_TOKEN`: the Vercel Blob store. When unset, storage uses `out/`.
-- `CRON_SECRET`: guards the daily cron route.
+- `CRON_SECRET`: guards the daily cron route and `/api/health/ffmpeg`.
+- `UPVOTED_FAKE_VOICES`: set to `1` for tones instead of Gemini in the voice stage.
+- `FFMPEG_BIN`: optional. An ffmpeg binary to use instead of `ffmpeg-static`'s.
 - `NEXT_PUBLIC_SITE_URL`: optional. The site's origin, which otherwise comes from Vercel's
   `VERCEL_PROJECT_PRODUCTION_URL`, or `http://localhost:3000` locally.
 

@@ -1,0 +1,40 @@
+{
+  "date": "2026-11-03",
+  "title": "Weight-space programming, WTF Ubuntu, and a tiny Show HN",
+  "description": "A small two-host script for testing the voice and mix steps.",
+  "segments": [
+    {
+      "kind": "intro",
+      "storyId": null,
+      "lines": [
+        { "speaker": "Maya", "text": "Good morning, this is Upvoted. I'm Maya.", "cue": "warm" },
+        { "speaker": "Theo", "text": "And I'm Theo. Three big stories today, so let's get into it." }
+      ]
+    },
+    {
+      "kind": "story",
+      "storyId": 50341174,
+      "lines": [
+        { "speaker": "Maya", "text": "First up, a model that reads and writes its own weights to get better at tasks." },
+        { "speaker": "Theo", "text": "Which sounds terrifying until you read the paper.", "cue": "laughs" },
+        { "speaker": "Maya", "text": "Right, it's closer to a very clever compiler than to anything sentient." }
+      ]
+    },
+    {
+      "kind": "story",
+      "storyId": 50337608,
+      "lines": [
+        { "speaker": "Theo", "text": "Next, a long rant titled WTF Ubuntu that hit a nerve.", "cue": "excited" },
+        { "speaker": "Maya", "text": "Over eight hundred comments, and most of them agreed with it." }
+      ]
+    },
+    {
+      "kind": "signoff",
+      "storyId": null,
+      "lines": [
+        { "speaker": "Maya", "text": "That's the show. Links are in the notes." },
+        { "speaker": "Theo", "text": "See you tomorrow." }
+      ]
+    }
+  ]
+}

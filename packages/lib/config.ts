@@ -33,7 +33,11 @@ const ConfigSchema = z.object({
     siteUrl: z.url(),
   }),
   writer: z.object({ model: z.string().min(1) }),
-  tts: z.object({ model: z.string().min(1) }),
+  tts: z.object({
+    model: z.string().min(1),
+    /** The show-wide delivery style. A line's cue overrides it for that line. */
+    style: z.string().min(1),
+  }),
   hosts: z
     .tuple([HostSchema, HostSchema])
     .refine(([a, b]) => a.name !== b.name, 'The two hosts need different names'),
@@ -71,11 +75,17 @@ export const config: Config = ConfigSchema.parse({
     siteUrl: siteUrl(),
   },
   writer: { model: 'anthropic/claude-opus-5.5' },
-  tts: { model: 'google/gemini-3.8-flash-lite-tts' },
-  // Placeholders: the voice task picks the real voices.
+  tts: {
+    // Moving up to 'google/gemini-3.8-flash-tts' is a one-line change.
+    model: 'google/gemini-3.8-flash-lite-tts',
+    style:
+      'A warm, relaxed morning-show conversation between two friends who know tech well. ' +
+      'Natural pace, easy laughter, never announcer-like.',
+  },
+  // Gemini prebuilt voices: Sulafat is "warm", Achird is "friendly".
   hosts: [
-    { name: 'Maya', voice: 'Kore' },
-    { name: 'Theo', voice: 'Puck' },
+    { name: 'Maya', voice: 'Sulafat' },
+    { name: 'Theo', voice: 'Achird' },
   ],
   retention: { episodes: 30, excludeDays: 7 },
 });
