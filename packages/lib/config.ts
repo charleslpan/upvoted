@@ -85,7 +85,8 @@ export const config: Config = ConfigSchema.parse({
     targetMinutes: 12,
     siteUrl: siteUrl(),
   },
-  writer: { model: 'anthropic/claude-opus-5.5' },
+  // Sonnet 5.5 is the best value for this job: about half Opus 5.5's cost for the same script quality.
+  writer: { model: 'anthropic/claude-sonnet-5.5' },
   tts: {
     // Moving up to 'google/gemini-3.8-flash-tts' is a one-line change.
     model: 'google/gemini-3.8-flash-lite-tts',
