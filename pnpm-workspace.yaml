@@ -11,10 +11,13 @@ catalog:
 
 # Dependencies allowed to run install scripts. ffmpeg-static downloads its binary on install.
 allowBuilds:
+  "@mongodb-js/zstd": false
   "@swc/core": false
   cbor-extract: false
   esbuild: false
   ffmpeg-static: true
+  # Optional native codecs of just-bash (the agent's sandbox), which needs neither.
+  node-liblzma: false
 
 minimumReleaseAgeExclude:
   - eve@1.0.0-rc.2
