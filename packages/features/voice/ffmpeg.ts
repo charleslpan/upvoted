@@ -34,9 +34,3 @@ export async function ffmpeg(args: string[], timeoutMs = 240_000): Promise<strin
     throw new Error(`ffmpeg failed: ${(error as Error).message}\n${tail}`);
   }
 }
-
-/** The first line of `ffmpeg -version`, for the health route. */
-export async function ffmpegVersion(): Promise<string> {
-  const { stdout } = await run(ffmpegPath(), ['-version'], { timeout: 10_000 });
-  return stdout.split('\n')[0]?.trim() ?? '';
-}

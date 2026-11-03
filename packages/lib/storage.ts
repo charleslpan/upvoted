@@ -12,6 +12,10 @@ import type { z } from 'zod';
  * their key, with no random suffix. Without it, they go to the local disk under `out/` at the
  * repo root (or under `UPVOTED_OUT_DIR`), so the pipeline and the tests run with no Vercel
  * account. The backend is picked on every call, from the environment at that moment.
+ *
+ * Outside production (`VERCEL_ENV` set to `preview` or `development`), every key lives under
+ * `preview/`, so a run on a preview deployment can't touch the live episode or its index. Keys
+ * passed in and returned are always the logical ones, without the prefix.
  */
 
 export interface StoredFile {
@@ -25,7 +29,6 @@ export interface StoredFile {
 export const keys = {
   index: 'index.json',
   episodeDir: (date: string) => `episodes/${date}/`,
-  brief: (date: string) => `episodes/${date}/brief.json`,
   script: (date: string) => `episodes/${date}/script.json`,
   transcript: (date: string) => `episodes/${date}/transcript.md`,
   segment: (date: string, index: number) => `episodes/${date}/segments/${index}.wav`,
@@ -61,31 +64,44 @@ export async function putFile(
 ): Promise<StoredFile> {
   assertKey(key);
   const body = typeof bytes === 'string' ? Buffer.from(bytes, 'utf8') : bytes;
-  return backend().put(key, body, contentType);
+  const stored = await backend().put(keyPrefix() + key, body, contentType);
+  return { ...stored, key };
 }
 
 /** Reads a file, or returns null when there is none. */
 export async function getFile(key: string): Promise<Buffer | null> {
   assertKey(key);
-  return backend().get(key);
+  return backend().get(keyPrefix() + key);
 }
 
 /** Lists every file whose key starts with `prefix`, sorted by key. */
 export async function list(prefix: string): Promise<StoredFile[]> {
   if (prefix !== '') assertKey(prefix.replace(/\/$/, ''));
-  const files = await backend().list(prefix);
+  const keyed = keyPrefix();
+  const files = (await backend().list(keyed + prefix)).map((file) => ({
+    ...file,
+    key: file.key.slice(keyed.length),
+  }));
   return files.sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
 }
 
 /** Deletes files. Keys with no file are ignored. */
 export async function del(keysToDelete: string[]): Promise<void> {
   for (const key of keysToDelete) assertKey(key);
-  if (keysToDelete.length > 0) await backend().del(keysToDelete);
+  const keyed = keyPrefix();
+  if (keysToDelete.length > 0) await backend().del(keysToDelete.map((key) => keyed + key));
 }
 
 /** Says where files are going, for logs. */
 export function describeStorage(): string {
-  return blobToken() ? 'Vercel Blob' : `local files in ${localRoot()}`;
+  const where = blobToken() ? 'Vercel Blob' : `local files in ${localRoot()}`;
+  return keyPrefix() ? `${where}, under ${keyPrefix()}` : where;
+}
+
+/** `preview/` outside production, so previews never touch the live files; '' otherwise. */
+export function keyPrefix(): string {
+  const env = process.env.VERCEL_ENV;
+  return env && env !== 'production' ? 'preview/' : '';
 }
 
 function assertKey(key: string): void {

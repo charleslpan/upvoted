@@ -1,14 +1,6 @@
 import { config } from '@upvoted/lib/config';
 import { describe, expect, it } from 'vitest';
-import {
-  type Brief,
-  BriefSchema,
-  type EpisodeIndex,
-  EpisodeIndexSchema,
-  type Script,
-  ScriptSchema,
-  type Story,
-} from './contract';
+import { type EpisodeIndex, EpisodeIndexSchema, type Script, ScriptSchema } from './contract';
 
 const maya = config.cast.host.name;
 const [theo, nadia, felix] = config.cast.correspondents.map((member) => member.name) as [
@@ -16,38 +8,6 @@ const [theo, nadia, felix] = config.cast.correspondents.map((member) => member.n
   string,
   string,
 ];
-
-function story(id: number, points: number): Story {
-  return {
-    id,
-    title: `Story ${id}`,
-    url: `https://example.com/${id}`,
-    by: 'someone',
-    points,
-    numComments: 10,
-    createdAt: '2026-11-02T12:00:00.000Z',
-    domain: 'example.com',
-    hnUrl: `https://news.ycombinator.com/item?id=${id}`,
-    kind: 'story',
-    selfText: null,
-    articleText: 'Article text.',
-    articleError: null,
-    comments: [
-      {
-        id: id * 10,
-        by: 'commenter',
-        text: 'A comment.',
-        replies: [{ id: id * 10 + 1, by: 'replier', text: 'A reply.', replies: [] }],
-      },
-    ],
-  };
-}
-
-const brief: Brief = {
-  date: '2026-11-03',
-  generatedAt: '2026-11-03T08:05:00.000Z',
-  stories: [story(1, 300), story(2, 200), story(3, 100)],
-};
 
 const storySegment = (storyId: number, correspondent: string) => ({
   kind: 'story' as const,
@@ -78,27 +38,6 @@ const withSegment = (i: number, segment: unknown) => ({
 });
 
 const roundTrip = <T>(value: T): unknown => JSON.parse(JSON.stringify(value));
-
-describe('Brief', () => {
-  it('round-trips through JSON unchanged', () => {
-    expect(BriefSchema.parse(roundTrip(brief))).toEqual(brief);
-  });
-
-  it('needs exactly three stories', () => {
-    expect(BriefSchema.safeParse({ ...brief, stories: brief.stories.slice(0, 2) }).success).toBe(
-      false,
-    );
-  });
-
-  it('needs the stories biggest first', () => {
-    const result = BriefSchema.safeParse({ ...brief, stories: [...brief.stories].reverse() });
-    expect(result.success).toBe(false);
-  });
-
-  it('rejects a date that is not YYYY-MM-DD', () => {
-    expect(BriefSchema.safeParse({ ...brief, date: '11/03/2026' }).success).toBe(false);
-  });
-});
 
 describe('Script', () => {
   it('round-trips through JSON unchanged', () => {

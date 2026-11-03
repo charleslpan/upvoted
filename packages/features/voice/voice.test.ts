@@ -50,8 +50,8 @@ describe('voiceSegment', () => {
 
     const result = await voiceSegment(date, 2, segment, adapter);
 
-    // 2,000 words is 800 seconds of speech, so at least four calls under the 240-second budget.
-    expect(adapter.calls.length).toBeGreaterThanOrEqual(4);
+    // 2,000 words is 800 seconds of speech, so at least seven calls under the 120-second budget.
+    expect(adapter.calls.length).toBeGreaterThanOrEqual(7);
     expect(adapter.calls.flatMap((call) => call.turns).map((t) => t.speaker)).toEqual(
       segment.lines.map((line) => line.speaker),
     );

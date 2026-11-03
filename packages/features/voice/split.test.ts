@@ -6,13 +6,14 @@ const words = (n: number) => Array.from({ length: n }, () => 'word').join(' ');
 const turn = (speaker: string, n: number): DialogueTurn => ({ speaker, text: words(n) });
 
 describe('splitTurns', () => {
-  it('keeps a normal story segment in one call', () => {
-    const turns = Array.from({ length: 30 }, (_, i) => turn(i % 2 ? 'Theo' : 'Maya', 15));
+  it('keeps a segment under the budget in one call', () => {
+    // 10 turns of 15 words is 60 seconds of speech, half the per-call budget.
+    const turns = Array.from({ length: 10 }, (_, i) => turn(i % 2 ? 'Theo' : 'Maya', 15));
     expect(splitTurns(turns, 100)).toEqual([turns]);
   });
 
   it('splits a long segment at whole turns, each call under the audio budget', () => {
-    // 60 turns of 40 words is 960 seconds of speech, four times the per-call budget.
+    // 60 turns of 40 words is 960 seconds of speech, eight times the per-call budget.
     const turns = Array.from({ length: 60 }, (_, i) => turn(i % 2 ? 'Theo' : 'Maya', 40));
     const calls = splitTurns(turns, 100);
 

@@ -36,7 +36,6 @@ function dates(count: number): string[] {
 
 async function saveEpisodeFiles(date: string): Promise<void> {
   await putFile(keys.episode(date), 'mp3', 'audio/mpeg');
-  await putJson(keys.brief(date), {});
   await putJson(keys.script(date), {});
   await putFile(keys.transcript(date), '# Transcript', 'text/markdown');
 }
@@ -91,8 +90,8 @@ describe('publishEpisode', () => {
     const { episodes } = await loadIndex();
     expect(episodes.map((episode) => episode.date)).toEqual(dates(7));
     expect(await list(keys.episodeDir('2026-10-27'))).toEqual([]);
-    expect(await list(keys.episodeDir('2026-10-28'))).toHaveLength(4);
-    expect(await list(keys.episodeDir(newest))).toHaveLength(4);
+    expect(await list(keys.episodeDir('2026-10-28'))).toHaveLength(3);
+    expect(await list(keys.episodeDir(newest))).toHaveLength(3);
   });
 
   it('rejects an invalid record without touching the index', async () => {

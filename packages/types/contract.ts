@@ -17,19 +17,7 @@ const TimestampSchema = z.iso.datetime();
 const HnIdSchema = z.int().positive();
 
 // ---------------------------------------------------------------------------------------------
-// Gathered stories
-
-export const CommentSchema = z.object({
-  id: HnIdSchema,
-  /** HN username. Scripts never read usernames aloud. */
-  by: z.string(),
-  /** Plain text: HTML stripped, entities decoded, paragraphs separated by blank lines. */
-  text: z.string(),
-  get replies(): z.ZodArray<typeof CommentSchema> {
-    return z.array(CommentSchema);
-  },
-});
-export type Comment = z.infer<typeof CommentSchema>;
+// Stories
 
 /** What selection returns: the story as it stood on HN when it was picked. */
 export const StoryRefSchema = z.object({
@@ -44,46 +32,18 @@ export const StoryRefSchema = z.object({
 });
 export type StoryRef = z.infer<typeof StoryRefSchema>;
 
-export const StoryKindSchema = z.enum(['story', 'ask', 'show']);
-export type StoryKind = z.infer<typeof StoryKindSchema>;
-
-export const StorySchema = StoryRefSchema.extend({
+/** A story as the show notes list it, looked up from HN by id so links are never the model's. */
+export const EpisodeStorySchema = z.object({
+  id: HnIdSchema,
+  title: z.string().min(1),
+  /** The linked article, or null for text posts. */
+  url: z.string().min(1).nullable(),
   /** The article's host name without `www.`, or null when there is no url. */
   domain: z.string().nullable(),
   /** `https://news.ycombinator.com/item?id=<id>` */
   hnUrl: z.url(),
-  kind: StoryKindSchema,
-  /** The post's own text (Ask HN, Show HN and other text posts), as plain text. */
-  selfText: z.string().nullable(),
-  /** The article's readable text, capped at about 8,000 words. */
-  articleText: z.string().nullable(),
-  /** Why the article text is missing, when the story has a url but no text could be read. */
-  articleError: z.string().nullable(),
-  /** Top-level comments in HN's own ranking order, each with up to two replies. */
-  comments: z.array(CommentSchema),
 });
-export type Story = z.infer<typeof StorySchema>;
-
-export const BriefSchema = z
-  .object({
-    date: EpisodeDateSchema,
-    generatedAt: TimestampSchema,
-    /** Exactly three stories, biggest (most points) first. */
-    stories: z.array(StorySchema).length(3),
-  })
-  .superRefine((brief, ctx) => {
-    brief.stories.forEach((story, i) => {
-      const previous = brief.stories[i - 1];
-      if (previous && previous.points < story.points) {
-        ctx.addIssue({
-          code: 'custom',
-          path: ['stories', i, 'points'],
-          message: 'Stories must be ordered biggest first',
-        });
-      }
-    });
-  });
-export type Brief = z.infer<typeof BriefSchema>;
+export type EpisodeStory = z.infer<typeof EpisodeStorySchema>;
 
 // ---------------------------------------------------------------------------------------------
 // Script
@@ -187,6 +147,23 @@ export const ScriptSchema = z
   });
 export type Script = z.infer<typeof ScriptSchema>;
 
+/**
+ * The script as the agent writes it: the running order and every line. The title, the show notes
+ * and each story segment's `storyId` are filled in by code, so links are never the model's.
+ */
+export const ScriptDraftSchema = z.object({
+  date: EpisodeDateSchema,
+  segments: z
+    .array(
+      z.object({
+        kind: SegmentKindSchema.describe('intro, then story three times, then signoff'),
+        lines: z.array(LineSchema).min(1),
+      }),
+    )
+    .min(1),
+});
+export type ScriptDraft = z.infer<typeof ScriptDraftSchema>;
+
 // ---------------------------------------------------------------------------------------------
 // Episodes
 
@@ -199,16 +176,6 @@ export const EpisodeAudioSchema = z.object({
   durationSec: z.number().nonnegative(),
 });
 export type EpisodeAudio = z.infer<typeof EpisodeAudioSchema>;
-
-/** A story as the site's show notes list it. */
-export const EpisodeStorySchema = StorySchema.pick({
-  id: true,
-  title: true,
-  url: true,
-  domain: true,
-  hnUrl: true,
-});
-export type EpisodeStory = z.infer<typeof EpisodeStorySchema>;
 
 export const EpisodeRecordSchema = z.object({
   date: EpisodeDateSchema,

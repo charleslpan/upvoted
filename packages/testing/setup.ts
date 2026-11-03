@@ -16,6 +16,8 @@ beforeEach(async () => {
   // has a Blob token.
   outDir = await mkdtemp(path.join(tmpdir(), 'upvoted-test-'));
   vi.stubEnv('BLOB_READ_WRITE_TOKEN', '');
+  // Storage keys get no preview/ prefix unless a test asks for one.
+  vi.stubEnv('VERCEL_ENV', '');
   vi.stubEnv('UPVOTED_OUT_DIR', outDir);
 });
 

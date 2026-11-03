@@ -4,11 +4,13 @@ import type { DialogueTurn } from './speech';
  * Gemini 3.8 Flash-Lite TTS takes at most 8,192 input tokens and returns at most 16,384 output
  * tokens, which at 25 audio tokens a second is about 10.9 minutes. Flash TTS has the same
  * limits. Each call is kept well inside both, and short enough to finish quickly: long calls
- * are also where Gemini is most likely to swap the two voices.
+ * are also where Gemini is most likely to swap the two voices, and where it speeds up. Stories
+ * of 600 to 700 words voiced in one or two calls came out at 190 words a minute on Nov 3, so
+ * calls stay near two minutes of audio.
  */
 export const CALL_BUDGET = {
   inputTokens: 4_000,
-  audioSec: 240,
+  audioSec: 120,
 };
 
 /** Conversational speech runs at about 150 words a minute. */

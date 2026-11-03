@@ -2,12 +2,12 @@ import { config } from '@upvoted/lib/config';
 import { episodeDate } from '@upvoted/lib/dates';
 import { del, getJson, keys, list, putJson } from '@upvoted/lib/storage';
 import {
-  type Brief,
   type EpisodeAudio,
   type EpisodeIndex,
   EpisodeIndexSchema,
   type EpisodeRecord,
   EpisodeRecordSchema,
+  type EpisodeStory,
   type Script,
 } from '@upvoted/types';
 
@@ -36,25 +36,19 @@ export async function loadExcludeIds(now: Date): Promise<number[]> {
   return [...new Set(ids)];
 }
 
-/** The index entry for a mixed episode. */
+/** The index entry for a mixed episode. `stories` are in running order. */
 export function episodeRecord(
-  brief: Brief,
   script: Script,
+  stories: EpisodeStory[],
   audio: EpisodeAudio,
   publishedAt: Date,
 ): EpisodeRecord {
   return EpisodeRecordSchema.parse({
-    date: brief.date,
+    date: script.date,
     title: script.title,
     description: script.description,
     audio,
-    stories: brief.stories.map(({ id, title, url, domain, hnUrl }) => ({
-      id,
-      title,
-      url,
-      domain,
-      hnUrl,
-    })),
+    stories,
     publishedAt: publishedAt.toISOString(),
   });
 }
