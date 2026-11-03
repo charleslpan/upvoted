@@ -5,7 +5,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { fakeAdapter } from './fake';
 import { ffmpeg } from './ffmpeg';
 import { mixEpisode, planDurationSec, planMix, TARGET_LUFS } from './mix';
-import { MUSIC } from './music';
 import { voiceSegment } from './voice';
 
 const script = ScriptSchema.parse(readJsonFixture('script-voice-sample.json'));
@@ -37,11 +36,6 @@ describe('planMix', () => {
       const next = parts[i + 1];
       if (next && part.type !== 'gap') expect(next.type).toBe('gap');
     });
-  });
-
-  it('keeps the theme intro between four and six seconds', () => {
-    expect(MUSIC.theme.durationSec).toBeGreaterThanOrEqual(4);
-    expect(MUSIC.theme.durationSec).toBeLessThanOrEqual(6);
   });
 });
 

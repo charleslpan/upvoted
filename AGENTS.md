@@ -147,6 +147,25 @@ Node's `fetch` uses it.
 - The config (`@upvoted/lib/config`) and the contract (`@upvoted/types`) are shared by every
   step. Change them deliberately, and update the tests and this file with them.
 
+## Tests
+
+A test earns its place only if both hold: a plausible bug in the code under test would make it
+fail, and a correct refactor wouldn't.
+
+- **Don't write tests that** assert prompt or copy wording (error messages, page text, the
+  script writer's prompt), or the content of fixtures we wrote ourselves; assert the order or
+  count of calls to internal functions or mocks, unless that order is the behavior (the mix
+  getting segments in script order, a retry calling again); mirror the implementation line by
+  line; or duplicate another test.
+- **Do test behavior that can break**: story selection, ranking and exclusions; HTML stripping
+  and article failures; the contract's speaker and segment rules; the storage backends;
+  splitting segments under the TTS limits; a real ffmpeg mix (duration, format, loudness);
+  publish retention, exclusion and idempotency; cron auth; and the `force` re-run.
+- Keep the suite deterministic. Steps that run in parallel may start in any order, so check
+  what they produce, not the order they were called in. Fake only `Date` for time.
+- When you delete a test that was the only coverage of something that matters, replace it with
+  one behavioral test.
+
 ## The daily workflow
 
 `vercel.json` (in `apps/web`) runs `GET /api/cron/daily` at `0 8 * * *`; Hobby fires it some time

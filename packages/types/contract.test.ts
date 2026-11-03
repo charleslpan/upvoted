@@ -93,7 +93,6 @@ describe('Brief', () => {
   it('needs the stories biggest first', () => {
     const result = BriefSchema.safeParse({ ...brief, stories: [...brief.stories].reverse() });
     expect(result.success).toBe(false);
-    expect(result.error?.issues[0]?.message).toBe('Stories must be ordered biggest first');
   });
 
   it('rejects a date that is not YYYY-MM-DD', () => {
@@ -124,7 +123,6 @@ describe('Script', () => {
     ];
     const result = ScriptSchema.safeParse(withSegment(i, { kind, storyId: null, lines }));
     expect(result.success).toBe(false);
-    expect(result.error?.issues[0]?.message).toBe(`Only the host, ${maya}, speaks in the ${kind}`);
   });
 
   it('needs the host and exactly one correspondent in a story', () => {
@@ -136,25 +134,18 @@ describe('Script', () => {
     for (const segment of [hostOnly, twoCorrespondents]) {
       const result = ScriptSchema.safeParse(withSegment(1, segment));
       expect(result.success).toBe(false);
-      expect(result.error?.issues[0]?.message).toBe(
-        `A story segment is the host, ${maya}, and exactly one correspondent`,
-      );
     }
   });
 
   it("gives each story its own correspondent, in the cast's order", () => {
     const result = ScriptSchema.safeParse(withSegment(2, storySegment(2, felix)));
     expect(result.success).toBe(false);
-    expect(result.error?.issues[0]?.message).toBe(`Story 2 is ${nadia}'s, not ${felix}'s`);
   });
 
   it('needs the intro, three stories and the sign-off, in that order', () => {
     const missing = { ...script, segments: script.segments.slice(0, 4) };
     const result = ScriptSchema.safeParse(missing);
     expect(result.success).toBe(false);
-    expect(result.error?.issues[0]?.message).toBe(
-      'The segments must run intro, story, story, story, signoff',
-    );
   });
 
   it('needs a storyId on a story segment', () => {
@@ -162,7 +153,6 @@ describe('Script', () => {
       withSegment(1, { ...storySegment(1, theo), storyId: null }),
     );
     expect(result.success).toBe(false);
-    expect(result.error?.issues[0]?.message).toBe('A story segment needs a storyId');
   });
 
   it.each([

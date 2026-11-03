@@ -1,13 +1,11 @@
 import { config } from '@upvoted/lib/config';
 import type { Segment } from '@upvoted/types';
 import { describe, expect, it } from 'vitest';
-import { dialogueRequest, segmentSpeakers, styleForCue, toTurn } from './speech';
+import { segmentSpeakers, styleForCue, toTurn } from './speech';
 
 describe('styleForCue', () => {
-  it('expands the common cues into fuller directions', () => {
-    expect(styleForCue('laughs')).toBe('laughing warmly as you speak');
-    expect(styleForCue(' Excited ')).toBe('excited and energetic');
-    expect(styleForCue('thoughtful')).toBe('thoughtful and unhurried');
+  it('ignores case and surrounding spaces', () => {
+    expect(styleForCue(' Excited ')).toBe(styleForCue('excited'));
   });
 
   it('passes any other cue through as the style', () => {
@@ -21,11 +19,11 @@ describe('styleForCue', () => {
 });
 
 describe('toTurn', () => {
-  it("maps a line to a turn, with the cue's style only when there is a cue", () => {
+  it("gives a turn the cue's style only when there is a cue", () => {
     expect(toTurn({ speaker: 'Maya', text: 'Ha!', cue: 'laughs' })).toEqual({
       speaker: 'Maya',
       text: 'Ha!',
-      style: 'laughing warmly as you speak',
+      style: styleForCue('laughs'),
     });
     expect(toTurn({ speaker: 'Theo', text: 'Hello.' })).toEqual({
       speaker: 'Theo',
@@ -59,14 +57,5 @@ describe('segmentSpeakers', () => {
   it('gives every cast member their own voice', () => {
     const voices = [host, ...correspondents].map((member) => member.voice);
     expect(new Set(voices).size).toBe(4);
-  });
-});
-
-describe('dialogueRequest', () => {
-  it("uses the show's style", () => {
-    const speakers = [{ name: 'Maya', voice: 'Sulafat' }];
-    const request = dialogueRequest(speakers, []);
-    expect(request.speakers).toBe(speakers);
-    expect(request.instructions).toBe(config.tts.style);
   });
 });

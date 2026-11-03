@@ -44,6 +44,7 @@ const audio = {
 };
 
 beforeEach(() => {
+  vi.clearAllMocks();
   vi.useFakeTimers({ now: new Date('2026-11-03T08:10:00Z'), toFake: ['Date'] });
   mocks.selectStories.mockResolvedValue(refs);
   mocks.gatherStory.mockImplementation(async (ref: StoryRef) => story(ref));
@@ -70,32 +71,15 @@ describe('dailyEpisode', () => {
 
     // Stories from the 24 hours before 08:00 UTC, skipping the past week's.
     expect(mocks.selectStories).toHaveBeenCalledWith(new Date('2026-11-03T08:00:00Z'), [1]);
-    expect(mocks.gatherStory.mock.calls.map(([ref]) => ref.id)).toEqual([1, 2, 3]);
 
     const brief = await getJson(keys.brief(DATE), BriefSchema);
     expect(brief?.stories.map((s) => s.id)).toEqual([1, 2, 3]);
-    // The three run in parallel, each after reading the brief, so they may start in any order.
-    expect(mocks.writeStorySegment.mock.calls.map(([, index]) => index).sort()).toEqual([0, 1, 2]);
 
     const script = await getJson(keys.script(DATE), ScriptSchema);
-    expect(script?.segments.map((s) => s.kind)).toEqual([
-      'intro',
-      'story',
-      'story',
-      'story',
-      'signoff',
-    ]);
+    expect(script?.segments.map((s) => s.storyId)).toEqual([null, 1, 2, 3, null]);
     expect(await getFile(keys.transcript(DATE))).not.toBeNull();
 
-    expect(
-      mocks.voiceSegment.mock.calls.map(([date, index, seg]) => [date, index, seg.kind]),
-    ).toEqual([
-      [DATE, 0, 'intro'],
-      [DATE, 1, 'story'],
-      [DATE, 2, 'story'],
-      [DATE, 3, 'story'],
-      [DATE, 4, 'signoff'],
-    ]);
+    // The segments are voiced in parallel, but they reach the mix in the script's order.
     expect(mocks.mixEpisode).toHaveBeenCalledWith(
       DATE,
       [0, 1, 2, 3, 4].map((i) => keys.segment(DATE, i)),
@@ -128,8 +112,6 @@ describe('dailyEpisode', () => {
 
     expect(await dailyEpisode(DATE, true)).toEqual({ date: DATE, status: 'published', audio });
 
-    expect(mocks.selectStories).toHaveBeenCalledOnce();
-    expect(mocks.mixEpisode).toHaveBeenCalledOnce();
     const script = await getJson(keys.script(DATE), ScriptSchema);
     const { episodes } = await loadIndex();
     expect(episodes).toHaveLength(1);
