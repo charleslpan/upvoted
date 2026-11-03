@@ -1,1 +1,1 @@
-export { loadExcludeIds, publishEpisode } from './publish';
+export { episodeRecord, findEpisode, loadExcludeIds, loadIndex, publishEpisode } from './publish';

@@ -147,12 +147,23 @@ export const EpisodeAudioSchema = z.object({
 });
 export type EpisodeAudio = z.infer<typeof EpisodeAudioSchema>;
 
+/** A story as the site's show notes list it. */
+export const EpisodeStorySchema = StorySchema.pick({
+  id: true,
+  title: true,
+  url: true,
+  domain: true,
+  hnUrl: true,
+});
+export type EpisodeStory = z.infer<typeof EpisodeStorySchema>;
+
 export const EpisodeRecordSchema = z.object({
   date: EpisodeDateSchema,
   title: z.string().min(1),
   description: z.string().min(1),
   audio: EpisodeAudioSchema,
-  storyIds: z.array(HnIdSchema),
+  /** The stories the episode covers, in running order. */
+  stories: z.array(EpisodeStorySchema),
   publishedAt: TimestampSchema,
 });
 export type EpisodeRecord = z.infer<typeof EpisodeRecordSchema>;

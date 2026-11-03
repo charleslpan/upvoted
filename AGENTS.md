@@ -18,7 +18,11 @@ A Turborepo + pnpm monorepo, laid out like Cal.com's.
 
 ```
 apps/
-  web/                @upvoted/web: the Next.js App Router app (site, feed, cron route, workflow)
+  web/                @upvoted/web: the Next.js App Router app
+    app/page.tsx              the site: the latest episode and its show notes
+    app/api/cron/daily/       the daily cron route, which starts the workflow
+    workflows/                the daily-episode workflow ('use workflow' / 'use step')
+    vercel.json               the cron schedule
 packages/
   types/              @upvoted/types: the zod data contract (contract.ts)
   lib/                @upvoted/lib: config.ts, storage.ts and small shared helpers
@@ -46,6 +50,11 @@ scripts/
   `createLimiter` (a concurrency cap).
 - **`@upvoted/lib/dates`** has `episodeDate(now)`, an episode's date in the show's time zone.
 - **`@upvoted/lib/errors`** has `NotImplementedError`, which a step that isn't built yet throws.
+- **`@upvoted/features/episodes`** reads and writes `index.json`: `loadIndex`, `findEpisode`,
+  `loadExcludeIds(now)` (story ids from episodes in the `retention.excludeDays` days before
+  `now`'s episode date, not counting that date), `episodeRecord(brief, script, audio, at)` and
+  `publishEpisode(record)`, which inserts newest first, replaces a record with the same date,
+  keeps `retention.episodes` (7) and deletes the dropped episodes' files.
 
 ### Package rules
 
@@ -92,7 +101,8 @@ The local runner (`scripts/episode.ts`) runs the stages in order, `gather`, `wri
 `mix`, `publish`, through `@upvoted/lib/storage`:
 
 - `--date` is the episode date (default: today in America/New_York). Stories come from the 24
-  hours before 08:00 UTC that day, when the daily cron runs, or before now if that's still ahead.
+  hours before 08:00 UTC that day, when the daily cron runs, or before now if that's still ahead
+  (`selectionTime` in `@upvoted/features/stories`, shared with the workflow).
 - `--from` starts at a later stage and reads the earlier stages' output from storage, so
   `pnpm episode --from write --until write` rewrites the script from a saved brief.
 - `--until` stops after a stage. `pnpm episode --until gather` writes
@@ -133,6 +143,30 @@ Node's `fetch` uses it.
   single quotes and 100-column lines.
 - The config (`@upvoted/lib/config`) and the contract (`@upvoted/types`) are shared by every
   step. Change them deliberately, and update the tests and this file with them.
+
+## The daily workflow
+
+`vercel.json` (in `apps/web`) runs `GET /api/cron/daily` at `0 8 * * *`; Hobby fires it some time
+in that hour. The route requires `Authorization: Bearer $CRON_SECRET` (401 otherwise), takes an
+optional `?date=YYYY-MM-DD` (default: today in the show's time zone), and starts `dailyEpisode`
+from `apps/web/workflows/daily-episode.ts` with `start()` from `workflow/api`, answering
+`{ date, runId }`. `next.config.ts` is wrapped with `withWorkflow`.
+
+The workflow returns at once if `index.json` already has the date's episode, so a re-run changes
+nothing. Otherwise it runs, as `'use step'` wrappers around `@upvoted/features`: select (with
+`loadExcludeIds`), three `gatherStory` in parallel, save `brief.json`, three `writeStorySegment`
+in parallel, the bookends and `script.json` + `transcript.md`, one `voiceSegment` per segment in
+parallel, `mixEpisode`, and `publishEpisode`. Steps pass dates, indexes, storage keys and
+contract types; the brief and the script travel through storage. Steps keep the SDK's default
+retries; a step that keeps failing fails the run before anything is published.
+
+The site (`app/page.tsx`) renders on each request from `index.json`, so a published episode shows
+at once. Each `EpisodeRecord` carries its `stories` (title, url, domain, HN link) for the show
+notes.
+
+Without the Workflow compiler, `'use workflow'` and `'use step'` are no-ops, so
+`daily-episode.test.ts` runs the workflow as a plain function with the model and ffmpeg steps
+mocked.
 
 ## Voice and mix
 

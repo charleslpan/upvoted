@@ -147,7 +147,13 @@ describe('EpisodeIndex', () => {
       bytes: 8_600_000,
       durationSec: 720.5,
     },
-    storyIds: [1, 2, 3],
+    stories: [1, 2, 3].map((id) => ({
+      id,
+      title: `Story ${id}`,
+      url: id === 3 ? null : `https://example.com/${id}`,
+      domain: id === 3 ? null : 'example.com',
+      hnUrl: `https://news.ycombinator.com/item?id=${id}`,
+    })),
     publishedAt: `${date}T08:20:00.000Z`,
   });
 

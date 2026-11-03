@@ -1,15 +1,70 @@
-export default function Home() {
+import { loadIndex } from '@upvoted/features/episodes';
+import { config } from '@upvoted/lib/config';
+import type { EpisodeRecord } from '@upvoted/types';
+
+// Read index.json on every request, so an episode shows as soon as it is published.
+export const dynamic = 'force-dynamic';
+
+export default async function Home() {
+  const { episodes } = await loadIndex();
+  const [latest] = episodes;
   return (
-    <main
-      style={{
-        fontFamily: 'system-ui, sans-serif',
-        maxWidth: '36rem',
-        margin: '20vh auto',
-        padding: '0 1.5rem',
-      }}
-    >
-      <h1>Upvoted — coming soon</h1>
-      <p>A daily podcast of the three biggest Hacker News stories.</p>
+    <main>
+      <header>
+        <h1>{config.show.name}</h1>
+        <p className="tagline">
+          The day's three biggest Hacker News stories, every morning. AI-generated, and not
+          affiliated with Hacker News or Y Combinator.
+        </p>
+      </header>
+      {latest ? (
+        <Episode episode={latest} />
+      ) : (
+        <p>The first episode is on its way. Check back tomorrow morning.</p>
+      )}
     </main>
   );
+}
+
+function Episode({ episode }: { episode: EpisodeRecord }) {
+  return (
+    <article>
+      <p className="date">
+        <time dateTime={episode.date}>{longDate(episode.date)}</time>
+      </p>
+      <h2>{episode.title}</h2>
+      {/* biome-ignore lint/a11y/useMediaCaption: a transcript page is out of scope for now. */}
+      <audio controls preload="metadata" src={episode.audio.url}>
+        <a href={episode.audio.url}>Download the episode</a>
+      </audio>
+      <h3>In this episode</h3>
+      <ol className="stories">
+        {episode.stories.map((story) => (
+          <li key={story.id}>
+            <span className="title">{story.title}</span>
+            <span className="links">
+              {story.url ? (
+                <>
+                  <a href={story.url}>Article{story.domain ? ` (${story.domain})` : ''}</a>
+                  {' · '}
+                </>
+              ) : null}
+              <a href={story.hnUrl}>HN discussion</a>
+            </span>
+          </li>
+        ))}
+      </ol>
+    </article>
+  );
+}
+
+/** `2026-11-03` → `Tuesday, November 3, 2026`. */
+function longDate(date: string): string {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: 'UTC',
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  }).format(new Date(`${date}T00:00:00Z`));
 }

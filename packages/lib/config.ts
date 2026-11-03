@@ -87,7 +87,8 @@ export const config: Config = ConfigSchema.parse({
     { name: 'Maya', voice: 'Sulafat' },
     { name: 'Theo', voice: 'Achird' },
   ],
-  retention: { episodes: 30, excludeDays: 7 },
+  // The site shows only the latest episode; a week of records covers the story exclusion.
+  retention: { episodes: 7, excludeDays: 7 },
 });
 
 export default config;
