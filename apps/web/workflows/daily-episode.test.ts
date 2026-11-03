@@ -74,7 +74,8 @@ describe('dailyEpisode', () => {
 
     const brief = await getJson(keys.brief(DATE), BriefSchema);
     expect(brief?.stories.map((s) => s.id)).toEqual([1, 2, 3]);
-    expect(mocks.writeStorySegment.mock.calls.map(([, index]) => index)).toEqual([0, 1, 2]);
+    // The three run in parallel, each after reading the brief, so they may start in any order.
+    expect(mocks.writeStorySegment.mock.calls.map(([, index]) => index).sort()).toEqual([0, 1, 2]);
 
     const script = await getJson(keys.script(DATE), ScriptSchema);
     expect(script?.segments.map((s) => s.kind)).toEqual([
