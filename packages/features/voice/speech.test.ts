@@ -1,12 +1,13 @@
 import { config } from '@upvoted/lib/config';
+import type { Segment } from '@upvoted/types';
 import { describe, expect, it } from 'vitest';
-import { dialogueRequest, styleForCue, toTurn } from './speech';
+import { dialogueRequest, segmentSpeakers, styleForCue, toTurn } from './speech';
 
 describe('styleForCue', () => {
   it('expands the common cues into fuller directions', () => {
     expect(styleForCue('laughs')).toBe('laughing warmly as you speak');
     expect(styleForCue(' Excited ')).toBe('excited and energetic');
-    expect(styleForCue('interrupting')).toBe('cutting in quickly, overlapping the other host');
+    expect(styleForCue('thoughtful')).toBe('thoughtful and unhurried');
   });
 
   it('passes any other cue through as the style', () => {
@@ -33,14 +34,39 @@ describe('toTurn', () => {
   });
 });
 
-describe('dialogueRequest', () => {
-  it("gives each host their configured voice and uses the show's style", () => {
-    const request = dialogueRequest([]);
-    expect(request.speakers).toEqual([
-      { name: config.hosts[0].name, voice: config.hosts[0].voice },
-      { name: config.hosts[1].name, voice: config.hosts[1].voice },
+describe('segmentSpeakers', () => {
+  const { host, correspondents } = config.cast;
+  const line = (speaker: string) => ({ speaker, text: 'Hello.' });
+
+  it('gives a host-only segment the host alone', () => {
+    const intro: Segment = { kind: 'intro', storyId: null, lines: [line(host.name)] };
+    expect(segmentSpeakers(intro)).toEqual([{ name: host.name, voice: host.voice }]);
+  });
+
+  it("gives a story the host and its correspondent, host first, with the cast's voices", () => {
+    const [, nadia] = correspondents;
+    const story: Segment = {
+      kind: 'story',
+      storyId: 1,
+      lines: [line(nadia.name), line(host.name), line(nadia.name)],
+    };
+    expect(segmentSpeakers(story)).toEqual([
+      { name: host.name, voice: host.voice },
+      { name: nadia.name, voice: nadia.voice },
     ]);
-    expect(new Set(request.speakers.map((s) => s.voice)).size).toBe(2);
+  });
+
+  it('gives every cast member their own voice', () => {
+    const voices = [host, ...correspondents].map((member) => member.voice);
+    expect(new Set(voices).size).toBe(4);
+  });
+});
+
+describe('dialogueRequest', () => {
+  it("uses the show's style", () => {
+    const speakers = [{ name: 'Maya', voice: 'Sulafat' }];
+    const request = dialogueRequest(speakers, []);
+    expect(request.speakers).toBe(speakers);
     expect(request.instructions).toBe(config.tts.style);
   });
 });

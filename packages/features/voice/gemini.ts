@@ -6,11 +6,26 @@ import type { DialogueRequest, SpeechAdapter } from './speech';
 const MAX_RETRIES = 3;
 
 /**
- * The `generateSpeech` options for a two-speaker Gemini call: both hosts' prebuilt voices in
- * `multiSpeakerVoiceConfig`, the lines as `turns`, and the show-wide style as `instructions`,
- * which a turn's own `style` overrides. `text` is empty because `turns` carries the transcript.
+ * The `generateSpeech` options for a Gemini call, with the show-wide style as `instructions`.
+ *
+ * One speaker (the host alone) uses single-speaker mode: the lines as plain `text` in that
+ * speaker's prebuilt `voice`. Two speakers (the host and a correspondent) use two-speaker mode:
+ * both voices in `multiSpeakerVoiceConfig` and the lines as `turns`, where a turn's own `style`
+ * overrides the instructions. `text` is then empty because `turns` carries the transcript.
  */
 export function geminiSpeechOptions(request: DialogueRequest) {
+  const [only, ...others] = request.speakers;
+  if (only && others.length === 0) {
+    return {
+      text: request.turns.map((turn) => turn.text).join('\n\n'),
+      voice: only.voice,
+      outputFormat: 'wav',
+      instructions: request.instructions,
+    };
+  }
+  if (request.speakers.length !== 2) {
+    throw new Error(`Gemini voices one or two speakers, not ${request.speakers.length}`);
+  }
   return {
     text: '',
     outputFormat: 'wav',

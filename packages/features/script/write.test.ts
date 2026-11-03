@@ -14,7 +14,12 @@ import {
 
 const brief = BriefSchema.parse(readJsonFixture('brief-sample.json')) as Brief;
 const sample = ScriptSchema.parse(readJsonFixture('script-sample.json')) as Script;
-const [maya, theo] = config.hosts.map((host) => host.name) as [string, string];
+const maya = config.cast.host.name;
+const [theo, nadia, felix] = config.cast.correspondents.map((member) => member.name) as [
+  string,
+  string,
+  string,
+];
 
 type CallOptions = MockLanguageModelV4['doGenerateCalls'][number];
 type GenerateResult = Awaited<ReturnType<MockLanguageModelV4['doGenerate']>>;
@@ -74,6 +79,16 @@ afterEach(() => {
 });
 
 describe('writeStorySegment', () => {
+  it("allows only the host and the story's own correspondent", async () => {
+    const model = mockWriter({ lines: (stories[1] as Segment).lines });
+    await writeStorySegment(brief, 1);
+    const call = callAt(model, 0);
+    const schema = call.responseFormat?.type === 'json' ? call.responseFormat.schema : undefined;
+    expect(schema).toMatchObject({
+      properties: { lines: { items: { properties: { speaker: { enum: [maya, nadia] } } } } },
+    });
+  });
+
   it('asks the configured model for structured lines at medium effort', async () => {
     const model = mockWriter({ lines: goodLines });
     await writeStorySegment(brief, 0);
@@ -107,7 +122,7 @@ describe('writeStorySegment', () => {
   });
 
   it('shows the full story but only the titles of the other two, and no usernames', async () => {
-    const model = mockWriter({ lines: goodLines });
+    const model = mockWriter({ lines: (stories[1] as Segment).lines });
     await writeStorySegment(brief, 1);
     const prompt = promptText(callAt(model, 0), 'user');
     const [first, second, third] = brief.stories;
@@ -124,7 +139,8 @@ describe('writeStorySegment', () => {
     for (const comment of second?.comments ?? []) {
       expect(prompt).not.toContain(`"${comment.by}"`);
     }
-    expect(prompt).toContain(`${theo} leads this story and ${maya} plays the curious skeptic`);
+    expect(prompt).toContain(`Only ${maya}, the host, and ${nadia}, this story's correspondent`);
+    expect(prompt).toContain(`${nadia} has been following this. Good morning.`);
   });
 
   it('retries once with the problems appended, then accepts a fixed answer', async () => {
@@ -159,7 +175,7 @@ describe('writeStorySegment', () => {
     const error = await writeStorySegment(brief, 2).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(ScriptValidationError);
     expect((error as ScriptValidationError).problems).toEqual([
-      `both ${maya} and ${theo} must speak`,
+      `both ${maya} and ${felix} must speak`,
     ]);
   });
 });
@@ -171,12 +187,30 @@ describe('writeBookends', () => {
 
     expect(result.intro).toEqual(intro);
     expect(result.signoff).toEqual(signoff);
-    const prompt = promptText(callAt(model, 0), 'user');
-    expect(prompt).toContain('This is Upvoted, the top of Hacker News for Tuesday, November 3');
+    const call = callAt(model, 0);
+    const prompt = promptText(call, 'user');
+    expect(prompt).toContain(
+      `I'm ${maya}, and this is Upvoted, the top of Hacker News for Tuesday, November 3.`,
+    );
+    expect(prompt).toContain(`And that's Upvoted for this Tuesday, November 3. I'm ${maya}.`);
+    const schema = call.responseFormat?.type === 'json' ? call.responseFormat.schema : undefined;
+    const hostOnly = { items: { properties: { speaker: { enum: [maya] } } } };
+    expect(schema).toMatchObject({ properties: { intro: hostOnly, signoff: hostOnly } });
     for (const segment of stories) {
       const line = segment.lines[0];
       expect(prompt).toContain(`${line?.speaker}: ${line?.text}`);
     }
+  });
+
+  it('rejects a correspondent in the cold open', async () => {
+    const withTheo = [...intro.lines, { speaker: theo, text: 'And I am Theo.' }];
+    const model = mockWriter(
+      { intro: withTheo, signoff: signoff.lines },
+      { intro: intro.lines, signoff: signoff.lines },
+    );
+    expect((await writeBookends(brief, stories)).intro).toEqual(intro);
+    expect(model.doGenerateCalls).toHaveLength(2);
+    expect(promptText(callAt(model, 1), 'user')).toContain("didn't match the JSON schema");
   });
 });
 
@@ -227,10 +261,8 @@ describe('renderTranscript', () => {
     expect(transcript).toContain('## Story 1\n\n');
     expect(transcript).toContain('## Story 3\n\n');
     expect(transcript).toContain('## Sign-off\n\n');
-    expect(transcript).toContain(
-      `**${theo}:** *(excited)* And glasses that let you talk to your computer without making a sound.`,
-    );
-    expect(transcript).toContain(`**${maya}:** Let's get into it.`);
+    expect(transcript).toContain(`**${theo}:** *(thoughtful)* Probably not magic.`);
+    expect(transcript).toContain(`**${felix}:** Good morning, ${maya}.`);
     expect(transcript.endsWith(`## Show notes\n\n${sample.description}\n`)).toBe(true);
   });
 });

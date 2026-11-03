@@ -6,7 +6,9 @@ import { z } from 'zod';
  * (dates are ISO strings), so a value round-trips through `JSON.stringify` and `parse` unchanged.
  */
 
-const hostNames = config.hosts.map((host) => host.name) as [string, string];
+const hostName = config.cast.host.name;
+const correspondentNames = config.cast.correspondents.map((member) => member.name);
+const castNames = [hostName, ...correspondentNames] as [string, ...string[]];
 
 /** YYYY-MM-DD, a calendar day in the show's time zone. */
 export const EpisodeDateSchema = z.iso.date();
@@ -87,13 +89,13 @@ export type Brief = z.infer<typeof BriefSchema>;
 // Script
 
 export const LineSchema = z.object({
-  speaker: z.enum(hostNames).describe("One of the two hosts' names"),
+  speaker: z.enum(castNames).describe("The host's or a correspondent's name"),
   text: z.string().min(1).describe('The spoken words, with no markup or stage directions'),
   cue: z
     .string()
     .min(1)
     .optional()
-    .describe('A short delivery direction such as "laughs", "excited" or "interrupting"'),
+    .describe('A short delivery direction such as "chuckles" or "thoughtful"'),
 });
 export type Line = z.infer<typeof LineSchema>;
 
@@ -122,16 +124,67 @@ export const SegmentSchema = z
         message: `An ${segment.kind} segment has no storyId`,
       });
     }
+    const speakers = new Set(segment.lines.map((line) => line.speaker));
+    if (segment.kind !== 'story' && [...speakers].some((speaker) => speaker !== hostName)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['lines'],
+        message: `Only the host, ${hostName}, speaks in the ${segment.kind}`,
+      });
+    }
+    if (segment.kind === 'story') {
+      const correspondents = correspondentNames.filter((name) => speakers.has(name));
+      if (!speakers.has(hostName) || correspondents.length !== 1) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['lines'],
+          message: `A story segment is the host, ${hostName}, and exactly one correspondent`,
+        });
+      }
+    }
   });
 export type Segment = z.infer<typeof SegmentSchema>;
 
-export const ScriptSchema = z.object({
-  date: EpisodeDateSchema,
-  title: z.string().min(1),
-  /** Show notes: each story's title, article link and HN discussion link. */
-  description: z.string().min(1),
-  segments: z.array(SegmentSchema).min(1),
-});
+/** The running order: the cold open, one story per correspondent, the sign-off. */
+const RUNNING_ORDER: SegmentKind[] = [
+  'intro',
+  ...correspondentNames.map(() => 'story' as const),
+  'signoff',
+];
+
+export const ScriptSchema = z
+  .object({
+    date: EpisodeDateSchema,
+    title: z.string().min(1),
+    /** Show notes: each story's title, article link and HN discussion link. */
+    description: z.string().min(1),
+    /** The intro, three story segments (correspondent `i` in story `i`) and the sign-off. */
+    segments: z.array(SegmentSchema).min(1),
+  })
+  .superRefine((script, ctx) => {
+    const kinds = script.segments.map((segment) => segment.kind);
+    if (kinds.join() !== RUNNING_ORDER.join()) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['segments'],
+        message: `The segments must run ${RUNNING_ORDER.join(', ')}`,
+      });
+      return;
+    }
+    script.segments.slice(1, -1).forEach((segment, i) => {
+      const expected = correspondentNames[i];
+      const stray = segment.lines.find(
+        (line) => line.speaker !== hostName && line.speaker !== expected,
+      );
+      if (stray) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['segments', i + 1, 'lines'],
+          message: `Story ${i + 1} is ${expected}'s, not ${stray.speaker}'s`,
+        });
+      }
+    });
+  });
 export type Script = z.infer<typeof ScriptSchema>;
 
 // ---------------------------------------------------------------------------------------------

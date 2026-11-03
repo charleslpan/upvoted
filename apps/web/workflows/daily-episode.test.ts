@@ -48,7 +48,7 @@ beforeEach(() => {
   mocks.selectStories.mockResolvedValue(refs);
   mocks.gatherStory.mockImplementation(async (ref: StoryRef) => story(ref));
   mocks.writeStorySegment.mockImplementation(async (brief, index: number) =>
-    segment('story', brief.stories[index].id),
+    segment('story', brief.stories[index].id, index),
   );
   mocks.writeBookends.mockResolvedValue({ intro: segment('intro'), signoff: segment('signoff') });
   mocks.voiceSegment.mockImplementation(async (date: string, index: number) => ({
@@ -74,7 +74,8 @@ describe('dailyEpisode', () => {
 
     const brief = await getJson(keys.brief(DATE), BriefSchema);
     expect(brief?.stories.map((s) => s.id)).toEqual([1, 2, 3]);
-    expect(mocks.writeStorySegment.mock.calls.map(([, index]) => index)).toEqual([0, 1, 2]);
+    // The three run in parallel, each after reading the brief, so they may start in any order.
+    expect(mocks.writeStorySegment.mock.calls.map(([, index]) => index).sort()).toEqual([0, 1, 2]);
 
     const script = await getJson(keys.script(DATE), ScriptSchema);
     expect(script?.segments.map((s) => s.kind)).toEqual([
@@ -120,6 +121,23 @@ describe('dailyEpisode', () => {
 
     for (const mock of Object.values(mocks)) expect(mock).not.toHaveBeenCalled();
     expect(await loadIndex()).toEqual(before);
+  });
+
+  it('makes the episode again and replaces it when forced', async () => {
+    await publishEpisode({ ...episode(DATE), title: 'The old format' });
+
+    expect(await dailyEpisode(DATE, true)).toEqual({ date: DATE, status: 'published', audio });
+
+    expect(mocks.selectStories).toHaveBeenCalledOnce();
+    expect(mocks.mixEpisode).toHaveBeenCalledOnce();
+    const script = await getJson(keys.script(DATE), ScriptSchema);
+    const { episodes } = await loadIndex();
+    expect(episodes).toHaveLength(1);
+    expect(episodes[0]).toMatchObject({
+      date: DATE,
+      title: script?.title,
+      publishedAt: '2026-11-03T08:10:00.000Z',
+    });
   });
 
   it('publishes nothing when a step fails', async () => {

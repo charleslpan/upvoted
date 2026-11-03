@@ -4,7 +4,7 @@ import { encodeWav, type PcmFormat } from './wav';
 
 /** Gemini's output format: 24 kHz mono 16-bit PCM. */
 export const FAKE_FORMAT: PcmFormat = { sampleRate: 24_000, channels: 1, bitsPerSample: 16 };
-/** Each speaker's tone, in config order. */
+/** Each speaker's tone, in the request's order: the host first. */
 export const FAKE_PITCHES = [220, 165];
 const TURN_GAP_SEC = 0.25;
 

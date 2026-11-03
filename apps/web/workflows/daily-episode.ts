@@ -26,17 +26,18 @@ import {
 
 /**
  * Makes and publishes the episode for `date` (YYYY-MM-DD). Does nothing when that date's episode
- * is already published, so a re-run changes nothing.
+ * is already published, so a re-run changes nothing, unless `force` is set: then it makes the
+ * episode again from fresh stories and replaces the published one.
  *
  * Each step is a thin wrapper around @upvoted/features that passes small JSON: dates, ids,
  * storage keys and contract types. The brief and the script travel through storage. A step that
  * throws is retried with the SDK's defaults; one that keeps failing fails the run, before
  * anything is published.
  */
-export async function dailyEpisode(date: string) {
+export async function dailyEpisode(date: string, force = false) {
   'use workflow';
 
-  if (await isPublished(date)) return { date, status: 'already published' as const };
+  if (!force && (await isPublished(date))) return { date, status: 'already published' as const };
 
   const refs = await selectStep(date);
   const stories = await Promise.all(refs.map((ref) => gatherStep(ref)));

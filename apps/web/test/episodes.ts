@@ -1,3 +1,4 @@
+import { config, correspondentFor } from '@upvoted/lib/config';
 import { keys } from '@upvoted/lib/storage';
 import type { EpisodeRecord, Segment, Story, StoryRef } from '@upvoted/types';
 
@@ -28,8 +29,11 @@ export function story(ref: StoryRef): Story {
   };
 }
 
-export function segment(kind: Segment['kind'], storyId: number | null = null): Segment {
-  return { kind, storyId, lines: [{ speaker: 'Maya', text: `A line for the ${kind}.` }] };
+/** A host-only intro or sign-off, or story `index`'s host-and-correspondent segment. */
+export function segment(kind: Segment['kind'], storyId: number | null = null, index = 0): Segment {
+  const lines = [{ speaker: config.cast.host.name, text: `A line for the ${kind}.` }];
+  if (kind === 'story') lines.push({ speaker: correspondentFor(index).name, text: 'Indeed.' });
+  return { kind, storyId, lines };
 }
 
 export function episode(date: string): EpisodeRecord {
