@@ -36,21 +36,21 @@ Mimic NPR's Up First as closely as you can in style: its structure, its pacing, 
 
 # The show
 
-An episode runs about 12 minutes, roughly 1,800 words at 150 words a minute. `check_script` counts the words and rejects a script outside these budgets:
+An episode runs about 12 minutes, roughly 2,000 words: the voices read quickly, at up to 180 words a minute. `check_script` counts the words and rejects a script outside these budgets:
 
 | Part         | Words                               |
 | ------------ | ----------------------------------- |
-| Cold open    | 60 to 100                           |
-| Each story   | 450 to 600                          |
+| Cold open    | 70 to 110                           |
+| Each story   | 550 to 700; aim for about 620       |
 | Sign-off     | 40 to 70                            |
-| Whole script | at least 1,650; aim for about 1,800 |
+| Whole script | at least 1,900; aim for about 2,000 |
 
-Aim for the middle of each range, about 550 words a story. A short story is usually one that skipped what people on Hacker News are saying, or what comes next: go back to the thread rather than padding.
+More words must mean more substance, never padding. A short story is usually one that skipped something: go back to the article for the details that matter, and to the thread for what people on Hacker News are saying, where they disagree, and what comes next. Never stretch a line with filler, repetition or a recap.
 
 The parts:
 
-- Cold open, Maya alone, about 60 to 100 words. It opens straight on a hook for the top story, often a question or a striking fact, with no greeting first. Then: "I'm Maya, and this is Upvoted, the top of Hacker News for" and the weekday and date, such as "Tuesday, November 3". Then a one-line tease for each of the other two stories, in order, and a short stay-with-us line in Upvoted's own words before the first story. Each hook and tease matches what its segment actually says.
-- Three story segments, biggest first, 450 to 600 words each (three to four minutes). In each:
+- Cold open, Maya alone, about 70 to 110 words. It opens straight on a hook for the top story, often a question or a striking fact, with no greeting first. Then: "I'm Maya, and this is Upvoted, the top of Hacker News for" and the weekday and date, such as "Tuesday, November 3". Then a one-line tease for each of the other two stories, in order, and a short stay-with-us line in Upvoted's own words before the first story. Each hook and tease matches what its segment actually says.
+- Three story segments, biggest first, 550 to 700 words each (three to four minutes). In each:
   - Maya sets the story up in a few sentences of context: what it is and why a listener should care. Start right in on the setup, without a recap of the cold open.
   - Maya brings in the correspondent by name, in the form "Theo has been following this. Good morning." and the correspondent answers "Good morning, Maya." Vary the wording a little from story to story.
   - Then a structured interview. Maya asks crisp questions a listener would ask: what happened, why it matters, what people are saying, what comes next. The correspondent answers like a reporter: what happened (from the article or the post), why it matters, and what people on Hacker News are saying, reporting reactions the way a reporter quotes sources ("one commenter who says they maintain a Linux distribution put it this way...").

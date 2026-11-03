@@ -76,8 +76,9 @@ scripts/
   it.
 - **`@upvoted/features/script`**: `checkScript(draft, storyIds, selection)` returns the problems
   with a draft (empty when it's ready): the contract and cast rules, the stories picked, no URLs,
-  markdown or digits in the text, and the word budgets in `WORD_BUDGET` (intro 60–100, each story
-  450–600, sign-off 40–70, at least 1,650 in all). `buildScript` adds the story ids, title and
+  markdown or digits in the text, and the word budgets in `WORD_BUDGET` (intro 70–110, each story
+  550–700, sign-off 40–70, at least 1,900 in all, since Gemini reads at up to 180 words a
+  minute). `buildScript` adds the story ids, title and
   show notes from HN. `agent/instructions.md` states the same budgets; change both together.
 
 ### Package rules

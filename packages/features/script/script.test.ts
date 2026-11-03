@@ -24,18 +24,18 @@ const words = (n: number) => Array.from({ length: n }, () => 'word').join(' ');
 
 /**
  * A script as the agent sends it (no story ids, title or show notes), inside every word budget:
- * an 80-word intro, three 510-word stories and a 50-word sign-off, 1,660 words in all.
+ * a 90-word intro, three 620-word stories and a 50-word sign-off, 2,000 words in all.
  */
 function draft(): ScriptDraft {
   return {
     date: sample.date,
     segments: [
-      { kind: 'intro', lines: [{ speaker: maya, text: words(80) }] },
+      { kind: 'intro', lines: [{ speaker: maya, text: words(90) }] },
       ...[theo, nadia, felix].map((correspondent) => ({
         kind: 'story' as const,
         lines: [
           { speaker: maya, text: words(60) },
-          { speaker: correspondent, text: words(450) },
+          { speaker: correspondent, text: words(560) },
         ],
       })),
       { kind: 'signoff', lines: [{ speaker: maya, text: words(50) }] },
@@ -104,15 +104,15 @@ describe('checkScript', () => {
   });
 
   it.each([
-    // 60 + 380 = 440 words, under 450.
+    // 60 + 480 = 540 words, under 550.
     [
       'a short story',
       1,
-      withSegment(1, (s) => ({ ...s, lines: [s.lines[0], { speaker: theo, text: words(380) }] })),
+      withSegment(1, (s) => ({ ...s, lines: [s.lines[0], { speaker: theo, text: words(480) }] })),
     ],
-    // 510 + 100 = 610 words, over 600.
+    // 620 + 100 = 720 words, over 700.
     ['a long story', 2, withLine(2, { speaker: nadia, text: words(100) })],
-    // 80 + 30 = 110 words, over 100.
+    // 90 + 30 = 120 words, over 110.
     ['a long cold open', 0, withLine(0, { speaker: maya, text: words(30) })],
     // 50 + 30 = 80 words, over 70.
     ['a long sign-off', 4, withLine(4, { speaker: maya, text: words(30) })],
@@ -125,10 +125,10 @@ describe('checkScript', () => {
     const short = draft();
     short.segments = short.segments.map((segment) =>
       segment.kind === 'story'
-        ? { ...segment, lines: [segment.lines[0], { ...segment.lines[1], text: words(400) }] }
+        ? { ...segment, lines: [segment.lines[0], { ...segment.lines[1], text: words(500) }] }
         : segment,
     ) as ScriptDraft['segments'];
-    // Stories of 460 words are in range, but 80 + 3 × 460 + 50 is 1,510.
+    // Stories of 560 words are in range, but 90 + 3 × 560 + 50 is 1,820.
     expect(checkScript(short, ids, selection)).toHaveLength(1);
   });
 });

@@ -18,14 +18,15 @@ import { CUES, spokenDate } from './prompt';
 const host = config.cast.host.name;
 
 /**
- * Word budgets for a 12-minute episode at about 150 words a minute. Each part's range, and a
+ * Word budgets for a 12-minute episode. Gemini's pace varies from about 150 to 180 words a
+ * minute, so they leave headroom: 1,672 words came out at 9:22 on Nov 3. Each part's range, and a
  * floor for the whole script; check_script rejects a draft outside them.
  */
 export const WORD_BUDGET = {
-  intro: { min: 60, max: 100 },
-  story: { min: 450, max: 600 },
+  intro: { min: 70, max: 110 },
+  story: { min: 550, max: 700 },
   signoff: { min: 40, max: 70 },
-  totalMin: 1_650,
+  totalMin: 1_900,
 } as const;
 
 /** The stories `get_top_stories` picked for an episode, biggest first. */
