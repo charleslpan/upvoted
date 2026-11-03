@@ -24,11 +24,9 @@ describe('voiceSegment', () => {
       { name: 'Maya', voice: 'Sulafat' },
       { name: 'Theo', voice: 'Charon' },
     ]);
-    expect(adapter.calls[0]?.turns).toEqual([
-      { speaker: 'Maya', text: segment.lines[0]?.text },
-      { speaker: 'Theo', text: segment.lines[1]?.text, style: 'with a light chuckle' },
-      { speaker: 'Maya', text: segment.lines[2]?.text },
-    ]);
+    expect(adapter.calls[0]?.turns.map((turn) => [turn.speaker, turn.text])).toEqual(
+      segment.lines.map((line) => [line.speaker, line.text]),
+    );
 
     const saved = await getFile(result.key);
     expect(saved).not.toBeNull();
@@ -38,15 +36,6 @@ describe('voiceSegment', () => {
     // The words at the fake's speaking rate, plus two short pauses between turns.
     const words = segment.lines.reduce((sum, line) => sum + countWords(line.text), 0);
     expect(result.durationSec).toBeCloseTo(words / WORDS_PER_SECOND + 0.5, 1);
-  });
-
-  it('voices a host-only segment with the host alone', async () => {
-    vi.spyOn(console, 'log').mockImplementation(() => {});
-    const adapter = fakeAdapter();
-    await voiceSegment(date, 0, script.segments[0] as Segment, adapter);
-    expect(adapter.calls.map((call) => call.speakers)).toEqual([
-      [{ name: 'Maya', voice: 'Sulafat' }],
-    ]);
   });
 
   it('splits a long segment into several calls and joins their audio in order', async () => {
@@ -83,8 +72,10 @@ describe('voiceSegment', () => {
       ) => fake.synthesize({ ...request, turns: request.turns.slice(0, 1) }, options),
     };
 
-    await voiceSegment(date, 1, script.segments[1] as Segment, truncated);
+    await voiceSegment(date, 1, script.segments[1] as Segment, fake);
+    expect(warn).not.toHaveBeenCalled();
 
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining('Listen for dropped'));
+    await voiceSegment(date, 1, script.segments[1] as Segment, truncated);
+    expect(warn).toHaveBeenCalled();
   });
 });

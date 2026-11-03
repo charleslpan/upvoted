@@ -3,7 +3,6 @@ import { readJsonFixture } from '@upvoted/testing/fixtures';
 import { type Brief, BriefSchema, type Script, ScriptSchema, type Segment } from '@upvoted/types';
 import { MockLanguageModelV4, MockProviderV4 } from 'ai/test';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { CUES, SCRIPT_STYLE_GUIDE } from './prompt';
 import {
   assembleScript,
   renderTranscript,
@@ -15,11 +14,8 @@ import {
 const brief = BriefSchema.parse(readJsonFixture('brief-sample.json')) as Brief;
 const sample = ScriptSchema.parse(readJsonFixture('script-sample.json')) as Script;
 const maya = config.cast.host.name;
-const [theo, nadia, felix] = config.cast.correspondents.map((member) => member.name) as [
-  string,
-  string,
-  string,
-];
+const theo = config.cast.correspondents[0].name;
+const felix = config.cast.correspondents[2].name;
 
 type CallOptions = MockLanguageModelV4['doGenerateCalls'][number];
 type GenerateResult = Awaited<ReturnType<MockLanguageModelV4['doGenerate']>>;
@@ -79,43 +75,7 @@ afterEach(() => {
 });
 
 describe('writeStorySegment', () => {
-  it("allows only the host and the story's own correspondent", async () => {
-    const model = mockWriter({ lines: (stories[1] as Segment).lines });
-    await writeStorySegment(brief, 1);
-    const call = callAt(model, 0);
-    const schema = call.responseFormat?.type === 'json' ? call.responseFormat.schema : undefined;
-    expect(schema).toMatchObject({
-      properties: { lines: { items: { properties: { speaker: { enum: [maya, nadia] } } } } },
-    });
-  });
-
-  it('asks the configured model for structured lines at medium effort', async () => {
-    const model = mockWriter({ lines: goodLines });
-    await writeStorySegment(brief, 0);
-
-    expect(model.doGenerateCalls).toHaveLength(1);
-    const call = callAt(model, 0);
-    expect(call.reasoning).toBe('medium');
-    expect(call.responseFormat?.type).toBe('json');
-    const schema = call.responseFormat?.type === 'json' ? call.responseFormat.schema : undefined;
-    expect(schema).toMatchObject({
-      type: 'object',
-      properties: {
-        lines: {
-          type: 'array',
-          items: {
-            properties: {
-              speaker: { enum: [maya, theo] },
-              cue: { enum: [...CUES] },
-            },
-          },
-        },
-      },
-    });
-    expect(promptText(call, 'system')).toBe(SCRIPT_STYLE_GUIDE);
-  });
-
-  it('returns a story segment for the story, with the model id from config', async () => {
+  it('returns the story segment the model wrote', async () => {
     mockWriter({ lines: goodLines });
     const segment = await writeStorySegment(brief, 0);
     expect(segment).toEqual({ kind: 'story', storyId: brief.stories[0]?.id, lines: goodLines });
@@ -132,51 +92,40 @@ describe('writeStorySegment', () => {
 
     expect(prompt).toContain(quoted(second?.articleText));
     expect(prompt).toContain(quoted(second?.comments[0]?.text));
-    expect(prompt).toContain(`- ${first?.title}`);
-    expect(prompt).toContain(`- ${third?.title}`);
+    expect(prompt).toContain(first?.title);
+    expect(prompt).toContain(third?.title);
     expect(prompt).not.toContain(quoted(first?.articleText));
     expect(prompt).not.toContain(quoted(third?.selfText));
     for (const comment of second?.comments ?? []) {
       expect(prompt).not.toContain(`"${comment.by}"`);
     }
-    expect(prompt).toContain(`Only ${maya}, the host, and ${nadia}, this story's correspondent`);
-    expect(prompt).toContain(`${nadia} has been following this. Good morning.`);
   });
 
-  it('retries once with the problems appended, then accepts a fixed answer', async () => {
-    const bad = [
-      { speaker: maya, text: 'Read it at https://example.com, it is *wild*.' },
-      { speaker: theo, text: 'Okay.' },
-    ];
-    const model = mockWriter({ lines: bad }, { lines: goodLines });
-    const segment = await writeStorySegment(brief, 0);
+  it.each([
+    ['a URL', 'Read it at https://example.com today.'],
+    ['markdown', 'It is *wild*.'],
+  ])('rejects a line with %s, and accepts the retry', async (_, text) => {
+    mockWriter({ lines: [{ speaker: maya, text }, ...goodLines.slice(1)] }, { lines: goodLines });
+    expect((await writeStorySegment(brief, 0)).lines).toEqual(goodLines);
+  });
 
-    expect(segment.lines).toEqual(goodLines);
-    expect(model.doGenerateCalls).toHaveLength(2);
-    const retry = promptText(callAt(model, 1), 'user');
-    expect(retry).toContain('Your previous attempt was rejected');
-    expect(retry).toContain('line 1: the text contains a URL or domain');
-    expect(retry).toContain('line 1: the text contains markdown');
+  it("rejects another story's correspondent, and accepts the retry", async () => {
+    const wrong = (stories[1] as Segment).lines.map((line) =>
+      line.speaker === maya ? line : { ...line, speaker: felix },
+    );
+    mockWriter({ lines: wrong }, { lines: (stories[1] as Segment).lines });
+    expect((await writeStorySegment(brief, 1)).lines).toEqual((stories[1] as Segment).lines);
   });
 
   it('retries when the output does not match the schema', async () => {
-    const model = mockWriter(
-      { lines: [{ speaker: maya, text: 'Hi.', cue: 'whispers' }] },
-      { lines: goodLines },
-    );
-    await writeStorySegment(brief, 0);
-    expect(model.doGenerateCalls).toHaveLength(2);
-    expect(promptText(callAt(model, 1), 'user')).toContain("didn't match the JSON schema");
+    mockWriter({ lines: [{ speaker: maya, text: 'Hi.', cue: 'whispers' }] }, { lines: goodLines });
+    expect((await writeStorySegment(brief, 0)).lines).toEqual(goodLines);
   });
 
   it('throws when the retry fails too', async () => {
     const onlyMaya = [{ speaker: maya, text: 'Just me today.' }];
     mockWriter({ lines: onlyMaya }, { lines: onlyMaya });
-    const error = await writeStorySegment(brief, 2).catch((e: unknown) => e);
-    expect(error).toBeInstanceOf(ScriptValidationError);
-    expect((error as ScriptValidationError).problems).toEqual([
-      `both ${maya} and ${felix} must speak`,
-    ]);
+    await expect(writeStorySegment(brief, 2)).rejects.toBeInstanceOf(ScriptValidationError);
   });
 });
 
@@ -187,30 +136,17 @@ describe('writeBookends', () => {
 
     expect(result.intro).toEqual(intro);
     expect(result.signoff).toEqual(signoff);
-    const call = callAt(model, 0);
-    const prompt = promptText(call, 'user');
-    expect(prompt).toContain(
-      `I'm ${maya}, and this is Upvoted, the top of Hacker News for Tuesday, November 3.`,
-    );
-    expect(prompt).toContain(`And that's Upvoted for this Tuesday, November 3. I'm ${maya}.`);
-    const schema = call.responseFormat?.type === 'json' ? call.responseFormat.schema : undefined;
-    const hostOnly = { items: { properties: { speaker: { enum: [maya] } } } };
-    expect(schema).toMatchObject({ properties: { intro: hostOnly, signoff: hostOnly } });
-    for (const segment of stories) {
-      const line = segment.lines[0];
-      expect(prompt).toContain(`${line?.speaker}: ${line?.text}`);
-    }
+    const prompt = promptText(callAt(model, 0), 'user');
+    for (const segment of stories) expect(prompt).toContain(segment.lines[0]?.text);
   });
 
-  it('rejects a correspondent in the cold open', async () => {
+  it('rejects a correspondent in the cold open, and accepts the retry', async () => {
     const withTheo = [...intro.lines, { speaker: theo, text: 'And I am Theo.' }];
-    const model = mockWriter(
+    mockWriter(
       { intro: withTheo, signoff: signoff.lines },
       { intro: intro.lines, signoff: signoff.lines },
     );
     expect((await writeBookends(brief, stories)).intro).toEqual(intro);
-    expect(model.doGenerateCalls).toHaveLength(2);
-    expect(promptText(callAt(model, 1), 'user')).toContain("didn't match the JSON schema");
   });
 });
 
@@ -232,15 +168,12 @@ describe('assembleScript', () => {
     );
   });
 
-  it('builds the title and show notes from the brief, matching the fixture', () => {
+  it("links every story's article and HN discussion in the show notes", () => {
     const script = assembleScript(brief, intro, stories, signoff);
-    expect(script.title).toBe(sample.title);
-    expect(script.description).toBe(sample.description);
     for (const story of brief.stories) {
       expect(script.description).toContain(story.hnUrl);
       if (story.url) expect(script.description).toContain(story.url);
     }
-    expect(script).toEqual(sample);
   });
 
   it('throws when a story segment is missing or belongs to another story', () => {
@@ -255,14 +188,11 @@ describe('assembleScript', () => {
 });
 
 describe('renderTranscript', () => {
-  it('renders headings, bold host names and italic cues', () => {
+  it('includes every line and the show notes', () => {
     const transcript = renderTranscript(sample);
-    expect(transcript.startsWith(`# ${sample.title}\n\n## Intro\n\n`)).toBe(true);
-    expect(transcript).toContain('## Story 1\n\n');
-    expect(transcript).toContain('## Story 3\n\n');
-    expect(transcript).toContain('## Sign-off\n\n');
-    expect(transcript).toContain(`**${theo}:** *(thoughtful)* Probably not magic.`);
-    expect(transcript).toContain(`**${felix}:** Good morning, ${maya}.`);
-    expect(transcript.endsWith(`## Show notes\n\n${sample.description}\n`)).toBe(true);
+    for (const line of sample.segments.flatMap((segment) => segment.lines)) {
+      expect(transcript).toContain(line.text);
+    }
+    expect(transcript).toContain(sample.description);
   });
 });

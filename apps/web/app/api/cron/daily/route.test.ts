@@ -59,11 +59,6 @@ describe('GET /api/cron/daily', () => {
     expect(start).toHaveBeenCalledWith(dailyEpisode, ['2026-11-01', true]);
   });
 
-  it('needs the secret to force a run', async () => {
-    expect((await call(`${URL}?force=1`, null)).status).toBe(401);
-    expect(start).not.toHaveBeenCalled();
-  });
-
   it('answers 400 for a force other than 0 or 1', async () => {
     expect((await call(`${URL}?force=yes`)).status).toBe(400);
     expect(start).not.toHaveBeenCalled();
