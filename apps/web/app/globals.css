@@ -86,3 +86,35 @@ audio {
 .stories .links {
   font-size: 0.9375rem;
 }
+
+.earlier {
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid color-mix(in srgb, var(--muted) 40%, transparent);
+}
+
+.earlier > h2 {
+  margin-bottom: 1.5rem;
+  font-size: 1.125rem;
+}
+
+.earlier article {
+  margin-bottom: 2rem;
+}
+
+.earlier h3 {
+  margin: 0.125rem 0 0.75rem;
+  font-size: 1.0625rem;
+  line-height: 1.35;
+}
+
+.earlier details {
+  margin-top: 0.75rem;
+}
+
+.earlier summary {
+  margin-bottom: 0.5rem;
+  font-size: 0.9375rem;
+  color: var(--muted);
+  cursor: pointer;
+}
