@@ -31,7 +31,7 @@ agent/                the eve agent (the root package's)
 vercel.ts             the Vercel project: the site and the agent as services (withEve)
 apps/
   web/                @upvoted/web: the Next.js App Router app
-    app/page.tsx              the site: the latest episode and its show notes
+    app/page.tsx              the site: the latest episode, then the earlier ones in the index
 packages/
   types/              @upvoted/types: the zod data contract (contract.ts)
   lib/                @upvoted/lib: config.ts, storage.ts and small shared helpers
@@ -239,8 +239,11 @@ costs.
 running, waiting for input, which costs nothing; it never times out while a turn is open.
 
 The site (`app/page.tsx`) renders on each request from `index.json`, so a published episode shows
-at once. Each `EpisodeRecord` carries its `stories` (title, url, domain, HN link) for the show
-notes.
+at once. It plays the latest episode, and below it lists the earlier ones still in the index
+(`retention.episodes`), newest first, each with its own player and show notes. Earlier players use
+`preload="none"`, so a page view fetches no metadata for their MP3s: Blob transfer is the limit
+we're closest to. Each `EpisodeRecord` carries its `stories` (title, url, domain, HN link) for the
+show notes.
 
 ## Deploying
 
